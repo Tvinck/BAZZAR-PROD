@@ -153,7 +153,12 @@ function extractUuid(key) {
 
 const requestHandler = async (req, res) => {
   try {
-    const reqUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+    let reqUrl;
+    try {
+      reqUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+    } catch (e) {
+      reqUrl = new URL(req.url, 'http://localhost');
+    }
     
     // ACME challenge handler for certbot
     if (reqUrl.pathname.startsWith('/.well-known/acme-challenge/')) {
