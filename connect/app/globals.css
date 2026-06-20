@@ -1,0 +1,173 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #__next {
+  height: 100%;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Scrollbars */
+*::-webkit-scrollbar { width: 6px; height: 6px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--color-line2); border-radius: 8px; }
+*::-webkit-scrollbar-thumb:hover { background: var(--color-mute2); }
+
+/* Focus rings */
+button:focus-visible,
+input:focus-visible,
+a:focus-visible {
+  outline: 2px solid rgba(20,114,245,0.6);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* Selection */
+::selection { background: rgba(20,114,245,0.4); color: #fff; }
+
+@layer components {
+  /* Card */
+  .card {
+    @apply bg-card border border-line rounded-[24px] transition-all duration-200 shadow-[0_2px_12px_rgba(0,0,0,0.01)];
+  }
+  .card:hover {
+    border-color: var(--color-line2);
+    background: var(--color-card-hover);
+    box-shadow: 0 4px 20px -2px rgba(0,0,0,0.04);
+  }
+  .card-tight {
+    @apply rounded-xl;
+  }
+
+  /* Nav active state */
+  .nav-active {
+    background: linear-gradient(180deg, rgba(20,114,245,0.18), rgba(20,114,245,0.06));
+    border: 1px solid rgba(20,114,245,0.35);
+    box-shadow: 0 0 24px -4px rgba(20,114,245,0.45), inset 0 0 0 1px rgba(255,255,255,0.02);
+  }
+
+  /* Glass */
+  .glass {
+    background: rgba(21,27,61,0.78);
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+
+  /* Backdrop */
+  .backdrop-overlay {
+    background: rgba(5,8,24,0.65);
+    backdrop-filter: blur(8px);
+  }
+
+  /* Form field */
+  .field {
+    @apply w-full bg-card border border-line text-slate-800 px-4 py-3.5 rounded-xl text-sm
+           placeholder:text-mute focus:border-accent focus:bg-card outline-none transition-all duration-200;
+  }
+  .field-icon {
+    @apply pl-11;
+  }
+
+  /* Grid background */
+  .grid-bg {
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* Blob for login */
+  .blob {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(80px);
+    opacity: 0.55;
+    pointer-events: none;
+  }
+
+  /* Kanban card */
+  .task-card {
+    cursor: grab;
+  }
+  .task-card:active {
+    cursor: grabbing;
+  }
+
+  /* Progress fill */
+  .progress-fill {
+    transform-origin: left center;
+    animation: fillin 900ms cubic-bezier(0.25,0.85,0.3,1) both;
+  }
+
+  /* Lift card */
+  .lift {
+    @apply transition-all duration-200;
+  }
+  .lift:hover {
+    transform: translateY(-3px);
+    border-color: #2C3463;
+    box-shadow: 0 12px 32px -16px rgba(0,0,0,0.5), 0 0 0 1px rgba(20,114,245,0.15);
+  }
+
+  /* Achievement locked */
+  .ach-locked {
+    filter: grayscale(1);
+    opacity: 0.45;
+  }
+
+  /* Consistent select/input dark styling — override browser defaults */
+  select {
+    color-scheme: dark;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238B92B4' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 2rem;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  input[type="date"] {
+    color-scheme: dark;
+  }
+
+  /* Smooth page transitions — targets PageContainer, not the layout <main> */
+  .page-enter {
+    animation: rise 300ms cubic-bezier(0.2,0.7,0.2,1) both;
+  }
+
+  /* Glow utilities */
+  .shadow-glow-gold {
+    box-shadow: 0 0 24px -4px rgba(255,200,51,0.40);
+  }
+  .shadow-glow {
+    box-shadow: 0 0 24px -4px rgba(20,114,245,0.45);
+  }
+
+  /* Table hover rows */
+  tbody tr:hover td {
+    background: rgba(255,255,255,0.015);
+  }
+}
+
+/* Design tokens */
+:root {
+  --color-primary: #1472F5;
+  --color-bg: #F4F5FA;
+  --color-card: #FFFFFF;
+  --color-card-hover: #F9FAFC;
+  --color-sidebar: #13141C;
+  --color-line: #E8E9F3;
+  --color-line2: #DFE1ED;
+  --color-text: #171821;
+  --color-mute: #7D81A0;
+  --color-mute2: #A4A7C1;
+}
+

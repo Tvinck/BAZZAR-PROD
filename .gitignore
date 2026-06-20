@@ -1,0 +1,38 @@
+# dependencies
+**/node_modules/
+**/.pnp
+.pnp.js
+**/.git_backup/
+
+# testing
+**/coverage
+
+# builds and logs
+**/.next/
+**/out/
+**/build/
+**/dist/
+**/*.log
+**/*.tsbuildinfo
+
+# local env files (security lock)
+**/.env
+**/.env.local
+**/.env.*
+**/.env.production
+**/.env.development
+**/.env.staging
+
+# vercel
+**/.vercel/
+
+# sqlite databases / backups
+**/*.db
+**/*.db.b64
+
+# browser cookies/credentials
+**/cookies.txt
+
+# OS system files
+.DS_Store
+Thumbs.db

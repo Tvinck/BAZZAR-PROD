@@ -1,0 +1,543 @@
+import React, { useState, useEffect } from 'react';
+import { ListRow, Block } from '../components/ui';
+import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+    ChevronRight, Zap, Globe, ShieldAlert, Check,
+    User, MapPin, Briefcase, Heart, MessageCircle, Languages,
+    Edit2, ChevronLeft, X, Wallet, HelpCircle, FileText, Users, Terminal,
+    Gift, Crown, ArrowRight, Mail, Bell, Layers
+} from 'lucide-react';
+import { useUser } from '../context/UserContext';
+import { useLanguage } from '../context/LanguageContext';
+import { useSound } from '../context/SoundContext';
+import AnimatedIcon from '../components/ui/AnimatedIcon';
+import SEO from '../components/SEO/SEO';
+
+// Components
+import { SkeletonProfile } from '../components/ui/Skeleton';
+import GiftModal from '../components/modals/GiftModal';
+import BottomSheet from '../components/ui/BottomSheet';
+
+
+
+const EditModal = ({ isOpen, onClose, title, value, onSave, type = 'text', options = [] }) => {
+    const { t } = useLanguage();
+    const [val, setVal] = useState(value || '');
+
+    useEffect(() => {
+        setVal(value || '');
+    }, [value, isOpen]);
+
+    const handleSave = () => {
+        onSave(val);
+        onClose();
+    };
+
+    return (
+        <BottomSheet
+            isOpen={isOpen}
+            onClose={onClose}
+            title={title}
+        >
+            <div className="space-y-4">
+                {type === 'select' ? (
+                    <div className="space-y-1">
+                        {options.map(opt => (
+                            <button
+                                key={opt}
+                                onClick={() => setVal(opt)}
+                                className={`w-full py-3 px-4 rounded-input text-left text-[17px] tracking-[-0.41px] transition-all flex justify-between items-center ${val === opt ? 'bg-accent-blue/10 text-accent-blue' : 'text-white hover:bg-bg-elevated'}`}
+                            >
+                                {opt}
+                                {val === opt && <Check size={20} className="text-accent-blue" strokeWidth={2.5} />}
+                            </button>
+                        ))}
+                    </div>
+                ) : (
+                    <input
+                        type={type}
+                        value={val}
+                        onChange={e => setVal(e.target.value)}
+                        className="w-full bg-bg-elevated rounded-input py-3 px-4 text-[17px] text-white placeholder:text-gray-500 outline-none focus:ring-1 focus:ring-[#007aff] transition-shadow tracking-[-0.41px]"
+                        placeholder={t('profile.enterValue') || 'Введите значение...'}
+                        autoFocus
+                    />
+                )}
+
+                <button
+                    onClick={handleSave}
+                    className="w-full bg-accent-blue text-white font-semibold text-[17px] py-3.5 rounded-input active:opacity-80 transition-opacity tracking-[-0.41px] shadow-lg shadow-accent-blue/20"
+                >
+                    {t('common.save')}
+                </button>
+            </div>
+        </BottomSheet>
+    );
+};
+
+const TransactionHistory = () => {
+    const { t } = useLanguage();
+    const [transactions, setTransactions] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchTransactions = async () => {
+            try {
+                const isDev = !window.Telegram?.WebApp?.initData;
+                let data = [];
+                if (isDev) {
+                    data = [
+                        { id: 1, type: 'topup', amount: 100, description: 'Пополнение баланса', created_at: new Date(Date.now() - 10000000).toISOString() },
+                        { id: 2, type: 'generation', amount: -5, description: 'Генерация изображения', created_at: new Date(Date.now() - 5000000).toISOString() },
+                        { id: 3, type: 'chat', amount: -1, description: 'Чат', created_at: new Date(Date.now() - 1000000).toISOString() }
+                    ];
+                } else {
+                    const res = await fetch('/api/payments/transactions', {
+                        headers: { 'X-TG-Data': window.Telegram?.WebApp?.initData || '' }
+                    });
+                    if (res.ok) {
+                        const json = await res.json();
+                        data = json.transactions || [];
+                    }
+                }
+                setTransactions(data);
+            } catch (e) {
+                console.error('Failed to fetch transactions', e);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchTransactions();
+    }, []);
+
+    if (loading) return <div className="p-4 text-center text-gray-500 text-[15px] tracking-[-0.24px]">{t('common.loading')}</div>;
+    if (transactions.length === 0) return <div className="p-4 text-center text-gray-500 text-[15px] tracking-[-0.24px]">{t('home.historyEmpty')}</div>;
+
+    return (
+        <div className="flex flex-col">
+            {transactions.slice(0, 5).map((tx, idx) => (
+                <div key={tx.id || idx} className="flex items-center justify-between py-[11px] pl-4 pr-3 relative hover:bg-bg-elevated transition-colors">
+                    <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${tx.amount > 0 ? 'bg-green-500/10' : 'bg-bg-elevated'}`}>
+                            <Zap size={16} className={tx.amount > 0 ? "fill-current text-green-500" : "text-white"} />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-[17px] text-white tracking-[-0.41px] leading-[22px]">{tx.description || (tx.amount > 0 ? 'Пополнение' : 'Списание')}</span>
+                            <span className="text-[13px] text-gray-400 tracking-[-0.08px] leading-[18px]">{new Date(tx.created_at).toLocaleDateString('ru-RU')}</span>
+                        </div>
+                    </div>
+                    <span className={`text-[17px] tracking-[-0.41px] ${tx.amount > 0 ? 'text-green-500' : 'text-white'}`}>
+                        {tx.amount > 0 ? '+' : ''}{tx.amount}
+                    </span>
+                    {idx !== Math.min(transactions.length, 5) - 1 && <div className="absolute bottom-0 left-[52px] right-0 h-[0.5px] bg-[#38383a]" />}
+                </div>
+            ))}
+        </div>
+    );
+};
+
+const ProfileView = ({ onOpenPayment }) => {
+    const navigate = useNavigate();
+    const { user, stats, isLoading, profile, refreshUser } = useUser();
+    const { lang, setLang, t } = useLanguage();
+    const { playClick } = useSound();
+
+    const ADMIN_USERS = ['artykosh', 'natelinsss'];
+    const ADMIN_IDS = [603207436, 500096232, 1165860888];
+    const isDev = user?.telegram_id && ADMIN_IDS.includes(Number(user.telegram_id));
+    const isAdmin = (user?.username && ADMIN_USERS.includes(user.username.toLowerCase())) || isDev || profile?.role === 'admin';
+
+    const [profileData, setProfileData] = useState({
+        gender: '',
+        age: '',
+        location: '',
+        activity: '',
+        interests: '',
+        style: '',
+        pixelLang: '',
+        bio: '',
+        website: '',
+        isPublic: false
+    });
+
+    const displayName = user?.first_name || 'Пользователь';
+    const initals = displayName.substring(0, 2).toUpperCase();
+
+    const [editModal, setEditModal] = useState({
+        isOpen: false,
+        field: null,
+        title: '',
+        type: 'text',
+        options: []
+    });
+
+    const [isGiftModalOpen, setIsGiftModalOpen] = useState(false);
+
+    useEffect(() => {
+        const loadProfile = async () => {
+            if (profile) {
+                setProfileData({
+                    gender: profile.gender || '',
+                    age: profile.age_range || '',
+                    location: profile.location || '',
+                    activity: profile.occupation || '',
+                    interests: Array.isArray(profile.interests) ? profile.interests.join(', ') : (profile.interests || ''),
+                    style: profile.communication_style || '',
+                    pixelLang: profile.language || '',
+                    bio: profile.bio || '',
+                    website: profile.website || '',
+                    isPublic: profile.is_public_profile || false
+                });
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/user/profile', {
+                    headers: { 'X-TG-Data': window.Telegram?.WebApp?.initData || '' }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.profile) {
+                        setProfileData({
+                            gender: data.profile.gender || '',
+                            age: data.profile.age_range || '',
+                            location: data.profile.location || '',
+                            activity: data.profile.occupation || '',
+                            interests: (data.profile.interests || []).join(', '),
+                            style: data.profile.communication_style || '',
+                            pixelLang: data.profile.language || ''
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to load profile:', err);
+                try {
+                    const saved = JSON.parse(localStorage.getItem('pixel_profile_data') || '{}');
+                    setProfileData(prev => ({ ...prev, ...saved }));
+                } catch { }
+            }
+        };
+        loadProfile();
+    }, [user, profile]);
+
+    const handleSaveField = async (value) => {
+        const field = editModal.field;
+        const newData = { ...profileData, [field]: value };
+        setProfileData(newData);
+        localStorage.setItem('pixel_profile_data', JSON.stringify(newData));
+
+        try {
+            const apiData = {
+                gender: newData.gender === 'Мужской' ? 'male' : newData.gender === 'Женский' ? 'female' : newData.gender,
+                age_range: newData.age,
+                location: newData.location,
+                occupation: newData.activity,
+                interests: newData.interests ? newData.interests.split(',').map(i => i.trim()) : [],
+                communication_style: newData.style === 'Дружелюбный' ? 'friendly' : newData.style === 'Официальный' ? 'formal' : newData.style === 'Саркастичный' ? 'playful' : newData.style,
+                language: newData.pixelLang === 'Русский' ? 'ru' : newData.pixelLang === 'English' ? 'en' : 'ru',
+                bio: newData.bio,
+                website: newData.website,
+                is_public_profile: newData.isPublic
+            };
+
+            await fetch('/api/user/profile', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-TG-Data': window.Telegram?.WebApp?.initData || ''
+                },
+                body: JSON.stringify(apiData)
+            });
+            refreshUser();
+        } catch (err) {
+            console.warn('Failed to sync profile to API', err);
+        }
+    };
+
+    const openEdit = (field, title, type = 'text', options = []) => {
+        playClick();
+        setEditModal({ isOpen: true, field, title, type, options });
+    };
+
+    const filledCount = Object.values(profileData).filter(v => v && v.toString().length > 0).length + 1;
+    const totalFields = 8;
+    const progressPercent = Math.round((filledCount / totalFields) * 100);
+
+    if (isLoading) return <SkeletonProfile />;
+
+    return (
+        <div className="min-h-screen bg-bg-primary text-white pb-28 relative overflow-y-auto w-full selection:bg-[#3390ec]/30 md:max-w-2xl md:mx-auto md:px-6">
+            <SEO 
+                title="Профиль — Bazzar Pixel"
+                description="Настройки аккаунта, баланс зарядов и управление подпиской"
+            />
+
+            {/* Premium Dynamic Backdrops */}
+            <div className="bg-glow-container">
+                <div className="bg-glow-blue" />
+                <div className="bg-glow-purple" />
+            </div>
+
+            {/* Header Settings Style */}
+            <div className="flex flex-col items-center mb-6">
+                <div className="w-[100px] h-[100px] rounded-full bg-gradient-to-tr from-[#3390ec] via-[#a855f7] to-[#ec4899] flex items-center justify-center text-[40px] font-black text-white shadow-2xl border border-white/20 relative mt-2">
+                    {initals}
+                    <button className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-bg-secondary border border-white/10 flex items-center justify-center text-white active:bg-bg-elevated shadow-md">
+                        <Edit2 size={12} />
+                    </button>
+                </div>
+                <h1 className="text-[28px] font-black font-display mt-3 tracking-[-0.6px] text-white">{displayName}</h1>
+                <p className="text-[16px] text-[#3390ec] font-bold font-display tracking-tight mt-0.5 cursor-pointer active:opacity-70">
+                    {t('profile.editProfile')}
+                </p>
+            </div>
+
+            <div className="space-y-6 px-4">
+
+                {/* 1. Wallet & App Info */}
+                <Block>
+                    <ListRow
+                        icon={<Wallet size={16} className="text-white" />}
+                        iconColor="bg-gradient-to-r from-orange-500 to-amber-500"
+                        label={t('profile.walletTokens')}
+                        value={stats?.current_balance || 0}
+                        onClick={() => { playClick(); onOpenPayment(); }}
+                    />
+                    <ListRow
+                        icon={<Gift size={16} className="text-white" />}
+                        iconColor="bg-gradient-to-r from-pink-500 to-rose-500"
+                        label="Подарить ⚡"
+                        value="Отправить"
+                        onClick={() => { playClick(); setIsGiftModalOpen(true); }}
+                    />
+                    <ListRow
+                        icon={<Globe size={16} className="text-white" />}
+                        iconColor="bg-gradient-to-r from-indigo-500 to-blue-500"
+                        label={t('profile.interfaceLang')}
+                        value={lang === 'ru' ? 'Русский' : 'English'}
+                        onClick={() => {
+                            playClick();
+                            setLang(lang === 'ru' ? 'en' : 'ru');
+                        }}
+                        isLast
+                    />
+                </Block>
+
+                {/* Subscription Rollover Status */}
+                {user?.subscription && (
+                    <div className="bg-gradient-to-br from-[#1c103a]/40 to-[#0c061d]/40 backdrop-blur-md rounded-[24px] p-5 border border-purple-500/20 relative overflow-hidden shadow-xl shadow-purple-950/15">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/10 rounded-full blur-[30px] -mr-6 -mt-6" />
+                        <div className="flex items-center gap-3 mb-4 relative z-10">
+                            <div className="w-10 h-10 rounded-[14px] bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
+                                <Crown size={20} className="text-white animate-pulse" />
+                            </div>
+                            <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                    <h4 className="text-[15px] font-extrabold text-white font-display">Pixel PRO</h4>
+                                    <span className="bg-purple-500/20 text-purple-400 text-[10px] font-extrabold px-1.5 py-0.5 rounded-full border border-purple-500/10 uppercase tracking-wide">Активна</span>
+                                </div>
+                                <p className="text-[12px] text-white/40 font-medium font-display">Следующее списание: 10 апр</p>
+                            </div>
+                        </div>
+                        <div className="bg-white/[0.02] border border-white/5 rounded-[18px] p-4 relative z-10">
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-[12px] text-white/50 font-bold font-display">Остаток зарядов</span>
+                                <span className="text-[14px] font-black text-white font-display">{stats?.current_balance || 0} / 1500 ⚡</span>
+                            </div>
+                            <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                                <div
+                                    className="h-full bg-gradient-to-r from-purple-500 to-indigo-400 rounded-full transition-all duration-500"
+                                    style={{ width: `${Math.min(100, ((stats?.current_balance || 0) / 1500) * 100)}%` }}
+                                />
+                            </div>
+                            <p className="text-[11px] text-purple-400 mt-2 flex items-center gap-1 font-bold font-display">
+                                <Zap className="w-3 h-3 fill-current text-purple-400" /> Перенос до 30% остатка на след. месяц
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+
+                {/* 2. Info details block */}
+                <div>
+                    <p className="text-[13px] text-gray-400 font-medium uppercase tracking-wider mb-2 ml-4">{t('profile.personalData')}</p>
+                    <Block>
+                        <ListRow label={t('profile.name')} value={displayName} />
+                        <ListRow label={t('profile.gender')} value={profileData.gender || t('profile.notSpecified')} onClick={() => openEdit('gender', t('profile.gender'), 'select', ['Мужской', 'Женский'])} />
+                        <ListRow label={t('profile.age')} value={profileData.age || t('profile.notSpecified')} onClick={() => openEdit('age', t('profile.age'), 'number')} />
+                        <ListRow label={t('profile.location')} value={profileData.location || t('profile.setCity')} onClick={() => openEdit('location', t('profile.location'))} />
+                        <ListRow label={t('profile.activity')} value={profileData.activity || t('profile.setActivity')} onClick={() => openEdit('activity', t('profile.activity'))} />
+                        <ListRow label={t('profile.interests')} value={profileData.interests || t('profile.setInterests')} onClick={() => openEdit('interests', t('profile.interests'))} isLast />
+                    </Block>
+                    {progressPercent < 100 && (
+                        <p className="text-[13px] text-gray-500 leading-tight mt-2 ml-4 tracking-[-0.08px]">
+                            {t('profile.profileProgress').replace('{percent}', progressPercent.toString())}
+                        </p>
+                    )}
+                </div>
+
+                {/* 3. Pixel Style */}
+                <div>
+                    <p className="text-[13px] text-gray-400 font-medium uppercase tracking-wider mb-2 ml-4">{t('profile.pixelSettings')}</p>
+                    <Block>
+                        <ListRow
+                            icon={<MessageCircle size={16} className="text-white" />}
+                            iconColor="bg-pink-500"
+                            label={t('profile.communicationStyle')}
+                            value={profileData.style || t('profile.notSpecified')}
+                            onClick={() => openEdit('style', t('profile.communicationStyle'), 'select', ['Дружелюбный', 'Официальный', 'Саркастичный', 'Милый'])}
+                        />
+                        <ListRow
+                            icon={<Languages size={16} className="text-white" />}
+                            iconColor="bg-teal-500"
+                            label={t('profile.responseLang')}
+                            value={profileData.pixelLang || 'Русский'}
+                            onClick={() => openEdit('pixelLang', t('profile.responseLang'), 'select', ['Русский', 'English', 'Español'])}
+                            isLast
+                        />
+                    </Block>
+                </div>
+
+                {/* 4. Social & Privacy */}
+                <div>
+                    <p className="text-[13px] text-gray-400 font-medium uppercase tracking-wider mb-2 ml-4">{t('profile.socialPrivacy')}</p>
+                    <Block>
+                        <ListRow
+                            icon={<Layers size={16} className="text-white" />}
+                            iconColor="bg-amber-500"
+                            label="Коллекции"
+                            value="Управление"
+                            onClick={() => navigate('/collections')}
+                        />
+                        <ListRow
+                            icon={<Users size={16} className="text-white" />}
+                            iconColor="bg-blue-600"
+                            label={t('profile.referralDash')}
+                            value={t('profile.bonuses')}
+                            onClick={() => navigate('/referrals')}
+                        />
+                        <ListRow
+                            icon={<Crown size={16} className="text-white" />}
+                            iconColor="bg-accent-purple"
+                            label="Партнёрская программа"
+                            value="15% комиссия"
+                            onClick={() => navigate('/affiliate')}
+                        />
+                        <ListRow
+                            icon={<User size={16} className="text-white" />}
+                            iconColor="bg-blue-500"
+                            label={t('profile.publicProfile')}
+                            value={profileData.isPublic ? t('profile.on') : t('profile.off')}
+                            onClick={() => handleSaveField(!profileData.isPublic).then(() => setProfileData(p => ({ ...p, isPublic: !p.isPublic })))}
+                        />
+                        <ListRow
+                            icon={<Edit2 size={16} className="text-white" />}
+                            iconColor="bg-accent-purple"
+                            label={t('profile.bio')}
+                            value={profileData.bio || t('profile.notSpecified')}
+                            onClick={() => openEdit('bio', t('profile.bio'))}
+                        />
+                        <ListRow
+                            icon={<Terminal size={16} className="text-white" />}
+                            iconColor="bg-gray-700"
+                            label="Developer API"
+                            value={t('profile.manageKeys') || 'Управление'}
+                            onClick={() => navigate('/developer')}
+                            isLast
+                        />
+                    </Block>
+                    <p className="text-[12px] text-gray-500 mt-2 ml-4 px-2">
+                        {t('profile.privacyTip')}
+                    </p>
+                </div>
+
+                {/* 5. Transactions */}
+                <div>
+                    <p className="text-[13px] text-gray-400 font-medium uppercase tracking-wider mb-2 ml-4">{t('profile.recentTransactions')}</p>
+                    <Block>
+                        <TransactionHistory />
+                    </Block>
+                </div>
+
+                {/* 6. Email for Reactivation */}
+                <div>
+                    <p className="text-[13px] text-gray-400 font-medium uppercase tracking-wider mb-2 ml-4">Уведомления</p>
+                    <Block>
+                        <ListRow
+                            icon={<Mail size={16} className="text-white" />}
+                            iconColor="bg-orange-500"
+                            label="Email"
+                            value={profileData.email || 'Добавить'}
+                            onClick={() => openEdit('email', 'Email для уведомлений')}
+                        />
+                        <ListRow
+                            icon={<Bell size={16} className="text-white" />}
+                            iconColor="bg-green-500"
+                            label="Новые функции и модели"
+                            value={profileData.emailNotifications ? 'Вкл' : 'Выкл'}
+                            onClick={() => {
+                                playClick();
+                                setProfileData(p => ({ ...p, emailNotifications: !p.emailNotifications }));
+                            }}
+                            isLast
+                        />
+                    </Block>
+                    <p className="text-[12px] text-gray-500 mt-2 ml-4 px-2">
+                        Мы отправим письмо только когда появится что-то новое и крутое ✨
+                    </p>
+                </div>
+
+                {/* 5. Extra */}
+                <Block>
+                    <ListRow
+                        icon={<HelpCircle size={16} className="text-white" />}
+                        iconColor="bg-blue-500/50"
+                        label={t('profile.support')}
+                        onClick={() => window.open('https://t.me/ArtyKosh', '_blank')}
+                    />
+                    <ListRow
+                        icon={<FileText size={16} className="text-white" />}
+                        iconColor="bg-gray-500"
+                        label={t('profile.about')}
+                        onClick={() => navigate('/guide')}
+                        isLast
+                    />
+                </Block>
+
+            </div>
+
+            {/* Edit Modal */}
+            <AnimatePresence>
+                {editModal.isOpen && (
+                    <EditModal
+                        isOpen={editModal.isOpen}
+                        onClose={() => setEditModal({ ...editModal, isOpen: false })}
+                        title={editModal.title}
+                        value={profileData[editModal.field]}
+                        type={editModal.type}
+                        options={editModal.options}
+                        onSave={handleSaveField}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* Gift Modal */}
+            <GiftModal
+                isOpen={isGiftModalOpen}
+                onClose={() => setIsGiftModalOpen(false)}
+                currentBalance={stats?.current_balance || 0}
+                onGiftSuccess={() => {
+                    // Temporarily subtract from local balance 
+                    if (stats && typeof refreshUser === 'function') {
+                        refreshUser();
+                    }
+                }}
+            />
+        </div>
+    );
+};
+
+export default ProfileView;
+

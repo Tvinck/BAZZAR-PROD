@@ -1,0 +1,199 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Core Connect models ----------
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  emoji       String?
+  color       String
+  status      ProjectStatus
+  progress    Int
+  description String?
+  created_at  DateTime @default(now())
+  links       ProjectLink[]
+  members     ProjectMember[]
+  tasks       Task[]
+  // VPN‑related optional JSON fields (kept for convenience)
+  vpnServers        Json?
+  vpnSubscriptions  Json?
+  vpnOrders         Json?
+  vpnReferrals      Json?
+  ideas             Idea[]
+}
+
+model ProjectLink {
+  id        String @id @default(uuid())
+  projectId String @map("project_id")
+  label     String
+  url       String
+  project   Project @relation(fields: [projectId], references: [id])
+}
+
+model ProjectMember {
+  id        String @id @default(uuid())
+  projectId String @map("project_id")
+  role      String
+  userId    String @map("user_id")
+  project   Project @relation(fields: [projectId], references: [id])
+  user      User    @relation(fields: [userId], references: [id])
+}
+
+model Task {
+  id          String   @id @default(uuid())
+  projectId   String   @map("project_id")
+  title       String
+  description String?
+  status      TaskStatus
+  priority    Int
+  dueDate     DateTime?
+  project     Project @relation(fields: [projectId], references: [id])
+  comments    TaskComment[]
+}
+
+// ---------- Veil VPN models ----------
+model VpnServer {
+  id         String @id @default(uuid())
+  name       String
+  ip         String
+  location   String
+  created_at DateTime @default(now())
+}
+
+model VpnSubscription {
+  id         String @id @default(uuid())
+  userId     String @map("user_id")
+  planId     String @map("plan_id")
+  started_at DateTime @default(now())
+  expires_at DateTime?
+  user       User @relation(fields: [userId], references: [id])
+}
+
+model VpnOrder {
+  id             String @id @default(uuid())
+  subscriptionId String @map("subscription_id")
+  amount         Decimal
+  created_at     DateTime @default(now())
+  subscription   VpnSubscription @relation(fields: [subscriptionId], references: [id])
+}
+
+model VpnReferral {
+  id         String @id @default(uuid())
+  referrerId String @map("referrer_id")
+  refereeId  String @map("referee_id")
+  created_at DateTime @default(now())
+  referrer   User @relation("Referrer", fields: [referrerId], references: [id])
+  referee    User @relation("Referee",  fields: [refereeId],  references: [id])
+}
+
+// ---------- Shared Auth ----------
+model User {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  full_name   String?
+  role        String?
+  status      String?
+  mention_tag String?  @unique
+  created_at  DateTime @default(now())
+  // relations
+  projects    Project[]
+  vpnSubs     VpnSubscription[]
+  vpnRefsSent VpnReferral[] @relation("Referrer")
+  vpnRefsRecv VpnReferral[] @relation("Referee")
+  ideas        Idea[]
+  ideaVotes    IdeaVote[]
+  ideaComments IdeaComment[]
+  taskComments TaskComment[]
+  notifications Notification[]
+}
+
+// ---------- Enums ----------
+enum ProjectStatus {
+  active
+  dev
+  planning
+}
+
+enum TaskStatus {
+  todo
+  in_progress
+  review
+  done
+}
+
+// ---------- Ideas models ----------
+model Idea {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  status      String   @default("new")
+  views       Int      @default(0)
+  projectId   String?  @map("project_id")
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  authorId    String   @map("author_id")
+  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  created_at  DateTime @default(now())
+  attachments String[] @default([])
+  links       String[] @default([])
+  votes       IdeaVote[]
+  comments    IdeaComment[]
+  tags        Tag[]    @relation("IdeaToTag")
+}
+
+model IdeaVote {
+  ideaId String @map("idea_id")
+  userId String @map("user_id")
+  value  Int
+  idea   Idea   @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([ideaId, userId])
+}
+
+model IdeaComment {
+  id          String   @id @default(uuid())
+  ideaId      String   @map("idea_id")
+  authorId    String   @map("author_id")
+  content     String
+  attachments String[] @default([])
+  created_at  DateTime @default(now())
+  idea        Idea     @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+model Tag {
+  id    String @id @default(uuid())
+  name  String @unique
+  ideas Idea[] @relation("IdeaToTag")
+}
+
+// ---------- Tasks Comments & Notifications ----------
+model TaskComment {
+  id         String   @id @default(uuid())
+  taskId     String   @map("task_id")
+  userId     String   @map("user_id")
+  content    String
+  created_at DateTime @default(now())
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  type       String
+  title      String
+  body       String?
+  link       String?
+  isRead     Boolean  @map("is_read") @default(false)
+  created_at DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
