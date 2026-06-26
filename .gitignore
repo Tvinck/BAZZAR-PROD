@@ -23,6 +23,24 @@
 **/.env.development
 **/.env.staging
 
+# one-off debug/ops scratch scripts (НИКОГДА не коммитить — содержат прод-креды)
+**/scratch/
+**/test_ssh/
+**/test_xui/
+**/*.secret.*
+
+# private keys / certificates / credential dumps (security lock)
+**/*.pem
+**/*.key
+**/*.pfx
+**/*.p12
+**/*.ppk
+**/id_rsa*
+**/*credentials*.json
+**/*service-account*.json
+**/*.sqlite
+**/*.sqlite3
+
 # vercel
 **/.vercel/
 

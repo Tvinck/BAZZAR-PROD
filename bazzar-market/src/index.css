@@ -1,0 +1,171 @@
+/* ============================================================================
+   BAZZAR MARKET — дизайн-система (тёмная премиум, гейм-маркетплейс)
+   Только дизайн: токены, поверхности, градиенты, свечение, карточки, кнопки.
+   ============================================================================ */
+
+:root {
+  /* Поверхности */
+  --bg: #0a0a11;
+  --bg-2: #0e0e18;
+  --surface: #15151f;
+  --surface-2: #1c1c2b;
+  --elevated: #20202f;
+  --hair: rgba(255, 255, 255, 0.08);
+  --hair-strong: rgba(255, 255, 255, 0.14);
+
+  /* Текст */
+  --text: #f5f5fa;
+  --text-2: #b6b6c9;
+  --text-3: #7c7c93;
+
+  /* Бренд / акценты */
+  --violet: #7c5cff;
+  --fuchsia: #d426d3;
+  --cyan: #22d3ee;
+  --lime: #a3e635;
+  --amber: #fbbf24;
+  --green: #2ee6a6;
+  --red: #ff5470;
+
+  --grad: linear-gradient(120deg, #7c5cff 0%, #c026d3 55%, #22d3ee 110%);
+  --grad-soft: linear-gradient(120deg, rgba(124,92,255,0.16), rgba(34,211,238,0.16));
+
+  --radius: 18px;
+  --radius-lg: 24px;
+  --radius-sm: 12px;
+
+  --font-display: 'Bricolage Grotesque', 'Onest', system-ui, sans-serif;
+  --font: 'Onest', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+  --shadow-glow: 0 16px 44px rgba(124, 92, 255, 0.35);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root { min-height: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; }
+input, textarea { font-family: inherit; }
+
+h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+
+::selection { background: rgba(124, 92, 255, 0.4); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #2a2a3d; border-radius: 8px; border: 2px solid var(--bg); }
+::-webkit-scrollbar-thumb:hover { background: #383852; }
+
+/* ── Утилиты ───────────────────────────────────────────────────────────── */
+.container { max-width: 1240px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 40px); }
+
+.grad-text {
+  background: var(--grad);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+
+.chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 13px; border-radius: 100px;
+  background: var(--surface-2); border: 1px solid var(--hair);
+  font-size: 0.8rem; font-weight: 600; color: var(--text-2);
+}
+
+.glass {
+  background: rgba(21, 21, 31, 0.6);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid var(--hair);
+}
+
+/* Карточка */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius);
+  transition: transform .35s cubic-bezier(.2,.8,.2,1), border-color .35s, box-shadow .35s, background .35s;
+}
+.card-hover:hover {
+  transform: translateY(-5px);
+  border-color: rgba(124, 92, 255, 0.45);
+  box-shadow: 0 22px 50px rgba(0,0,0,0.5), 0 0 0 1px rgba(124,92,255,0.25);
+  background: var(--surface-2);
+}
+
+/* Кнопки */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border: none; border-radius: 13px; padding: 13px 22px;
+  font-weight: 700; font-size: 0.92rem; font-family: var(--font);
+  transition: transform .2s ease, box-shadow .25s ease, background .25s, opacity .2s;
+  white-space: nowrap;
+}
+.btn:active { transform: scale(.97); }
+
+.btn-primary {
+  background: var(--grad); background-size: 160% 160%; color: #fff;
+  box-shadow: 0 10px 26px rgba(124, 92, 255, 0.4);
+}
+.btn-primary:hover { background-position: 100% 50%; box-shadow: 0 14px 34px rgba(124, 92, 255, 0.6); transform: translateY(-1px); }
+
+.btn-ghost { background: var(--surface-2); color: var(--text); border: 1px solid var(--hair); }
+.btn-ghost:hover { background: var(--elevated); border-color: var(--hair-strong); }
+
+.btn-soft { background: rgba(124,92,255,0.14); color: #c4b5ff; border: 1px solid rgba(124,92,255,0.25); }
+.btn-soft:hover { background: rgba(124,92,255,0.22); }
+
+/* Бейджи */
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 9px; border-radius: 8px; font-size: 0.72rem; font-weight: 700; letter-spacing: .02em;
+}
+.badge-sale { background: rgba(255,84,112,0.16); color: #ff8098; }
+.badge-hot { background: linear-gradient(120deg,#ff5470,#fbbf24); color: #1a0e00; }
+.badge-new { background: rgba(46,230,166,0.16); color: #5af0c2; }
+
+/* Инпут */
+.field {
+  width: 100%; background: var(--surface-2); border: 1px solid var(--hair);
+  border-radius: 13px; padding: 14px 16px; color: var(--text); font-size: 0.95rem; outline: none;
+  transition: border-color .2s, background .2s, box-shadow .2s;
+}
+.field::placeholder { color: var(--text-3); }
+.field:focus { border-color: rgba(124,92,255,0.6); background: var(--surface); box-shadow: 0 0 0 4px rgba(124,92,255,0.12); }
+
+/* Сетка товаров */
+.grid-products { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 18px; }
+
+/* mesh-блобы фона */
+.mesh { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+.blob { position: absolute; border-radius: 50%; filter: blur(80px); opacity: .5; }
+
+@keyframes float-y { 0%,100%{ transform: translateY(0) } 50%{ transform: translateY(-14px) } }
+@keyframes pan { 0%{ background-position:0% 50% } 50%{ background-position:100% 50% } 100%{ background-position:0% 50% } }
+@keyframes spin-slow { to { transform: rotate(360deg) } }
+@keyframes marquee { from { transform: translateX(0) } to { transform: translateX(-50%) } }
+@keyframes shimmer { 0%{ background-position: -200% 0 } 100%{ background-position: 200% 0 } }
+
+.section { padding: clamp(48px, 7vw, 92px) 0; position: relative; }
+.section-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 28px; flex-wrap: wrap; }
+.section-title { font-size: clamp(1.5rem, 3vw, 2.1rem); }
+.kicker { font-family: var(--font-display); font-size: 0.78rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--violet); }
+
+.mobile-hide { }
+@media (max-width: 880px) {
+  .mobile-hide { display: none !important; }
+  .grid-products { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+}

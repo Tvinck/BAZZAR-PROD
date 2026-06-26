@@ -16,7 +16,6 @@ import { motion } from 'framer-motion';
  * @param {number|string} props.size - Size of the icon
  */
 const AnimatedIcon = ({
-// eslint-disable-next-line no-unused-vars
     icon: _Icon,
     className = '',
     delay = 0,

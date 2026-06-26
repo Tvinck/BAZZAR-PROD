@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-// eslint-disable-next-line no-unused-vars
 export const ZenlyListRow = ({ title, subtitle, icon: _Icon, gradient, delay = 0, onClick }) => {
     return (
         <motion.div

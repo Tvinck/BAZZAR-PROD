@@ -1,8 +1,6 @@
 import fetch from 'node-fetch';
 import { supabase } from '../lib/supabase.js';
 
-/* eslint-env node */
-
 // Configuration
 // Ensure these are set in your environment or .env file
 const API_KEY = process.env.YANDEX_MARKET_API_KEY || 'YOUR_API_KEY';

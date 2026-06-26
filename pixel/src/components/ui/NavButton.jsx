@@ -1,6 +1,5 @@
 import React from 'react';
 
-// eslint-disable-next-line no-unused-vars
 const NavButton = ({ icon: _Icon, isActive, onClick }) => (
     <button
         onClick={onClick}
