@@ -148,6 +148,17 @@ export async function updateCertStatus(certId: string, status: string, comment?:
     return { success: false, error: 'У вас нет прав для согласования сертификатов' };
   }
 
+  // Получаем сертификат ДО обновления статуса, чтобы знать udid и source
+  const { data: cert, error: certFetchErr } = await supabase
+    .from('apple_certificates')
+    .select('*')
+    .eq('id', certId)
+    .maybeSingle();
+
+  if (certFetchErr) {
+    console.error('Error fetching cert for status update:', certFetchErr);
+  }
+
   const { error } = await supabase
     .from('apple_certificates')
     .update({ 
@@ -159,6 +170,70 @@ export async function updateCertStatus(certId: string, status: string, comment?:
 
   if (error) {
     return { success: false, error: error.message };
+  }
+
+  // Если сертификат одобрен, источник GGSel или Digiseller и есть комментарий — отправляем автоматически в чат
+  if (status === 'approved' && cert && (cert.source === 'GGSel' || cert.source === 'Digiseller') && comment) {
+    try {
+      // Ищем заказ по udid, чтобы получить uniquecode
+      const { data: order } = await supabase
+        .from('bazzar_orders')
+        .select('uniquecode')
+        .eq('udid', cert.udid)
+        .eq('status', 'linked')
+        .maybeSingle();
+
+      if (order && order.uniquecode) {
+        const isDigiseller = cert.source === 'Digiseller';
+        const sellerId = isDigiseller ? process.env.DIGISELLER_SELLER_ID : process.env.GGSEL_SELLER_ID;
+        const apiKey = isDigiseller ? process.env.DIGISELLER_API_KEY : process.env.GGSEL_API_KEY;
+        const apiBaseUrl = isDigiseller ? 'https://api.digiseller.com/api' : 'https://seller.ggsel.com/api_sellers/api';
+
+        if (sellerId && apiKey) {
+          const crypto = require('crypto');
+          const timestamp = isDigiseller ? Math.floor(Date.now() / 1000).toString() : Date.now().toString();
+          const sign = crypto.createHash('sha256').update(apiKey + timestamp).digest('hex');
+
+          // Авторизация
+          const loginRes = await fetch(`${apiBaseUrl}/apilogin`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ 
+              seller_id: parseInt(sellerId, 10), 
+              timestamp: isDigiseller ? parseInt(timestamp, 10) : timestamp, 
+              sign 
+            })
+          });
+          
+          if (loginRes.ok) {
+            const loginData = await loginRes.json();
+            if (loginData.token) {
+              // Получаем детали покупки, чтобы узнать id_i / inv (инвойс/чат)
+              const verifyRes = await fetch(`${apiBaseUrl}/purchases/unique-code/${order.uniquecode}?token=${loginData.token}`);
+              if (verifyRes.ok) {
+                const verifyData = await verifyRes.json();
+                const id_i = verifyData.inv || verifyData.id_i;
+
+                if (id_i) {
+                  // Отправляем инструкцию покупателю в чат
+                  await fetch(`${apiBaseUrl}/debates/v2/message?token=${loginData.token}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({
+                      id_i: id_i,
+                      message: comment.trim()
+                    })
+                  });
+                  console.log(`Successfully auto-sent CRM comment to ${cert.source} chat for order ${order.uniquecode}`);
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (sendErr) {
+      console.error(`Failed to auto-send ${cert.source} notification:`, sendErr);
+    }
   }
 
   revalidatePath('/apple-certs');
