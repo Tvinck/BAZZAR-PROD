@@ -1,0 +1,18 @@
+<!-- @dsCard group="Colors" viewport="700x150" name="Text & Promo" subtitle="Three text levels + the green promo gradient" -->
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+.wrap { display: flex; gap: 12px; padding: 16px; }
+.txt { flex: 1; background: var(--surface); border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+.grad { flex: 1; background: var(--promo-grad); border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; justify-content: flex-end; color: #fff; font-size: 12px; }
+</style></head>
+<body>
+<div class="wrap">
+  <div class="txt">
+    <span style="color: var(--text); font-weight: 600;">--text — заголовки и текст</span>
+    <span style="color: var(--text-2); font-size: 15px;">--text-2 — подписи карточек</span>
+    <span style="color: var(--text-3); font-size: 13px;">--text-3 — метки и время</span>
+  </div>
+  <div class="grad"><code>--promo-grad</code>#2e7d44 → #56b56b</div>
+</div>
+</body></html>

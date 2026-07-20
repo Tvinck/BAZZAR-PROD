@@ -31,16 +31,18 @@ const ICON_MAP: Record<string, React.ElementType> = {
 }
 
 const CATS = [
-  { id: 'all',       label: 'Все',        emoji: '✨' },
-  { id: 'seo',       label: 'SEO',        emoji: '🔍' },
-  { id: 'design',    label: 'Дизайн',     emoji: '🎨' },
-  { id: 'dev',       label: 'Разработка', emoji: '💻' },
-  { id: 'fin',       label: 'Финансы',    emoji: '💰' },
-  { id: 'ai',        label: 'AI',         emoji: '🤖' },
-  { id: 'analytics', label: 'Аналитика',  emoji: '📊' },
+  { id: 'all',        label: 'Все',        emoji: '✨' },
+  { id: 'management', label: 'Управление', emoji: '⚙️' },
+  { id: 'seo',        label: 'SEO',        emoji: '🔍' },
+  { id: 'design',     label: 'Дизайн',     emoji: '🎨' },
+  { id: 'dev',        label: 'Разработка', emoji: '💻' },
+  { id: 'fin',        label: 'Финансы',    emoji: '💰' },
+  { id: 'ai',         label: 'AI',         emoji: '🤖' },
+  { id: 'analytics',  label: 'Аналитика',  emoji: '📊' },
 ]
 
 const SERVICES = [
+  { slug: 'admin',          name: 'Администрирование',   desc: 'Управление сотрудниками',     cat: 'management', color: '#10b981', icon: 'Settings', url: '/admin' },
   { slug: 'bazzar-certs',   name: 'Bazzar Certs',        desc: 'Сертификаты Apple Developer', cat: 'dev', color: '#3b82f6', icon: 'Globe', url: 'https://bazzar-serts.shop' },
   { slug: 'bot-certs',      name: 'Бот @one_ibot',       desc: 'Telegram-бот сертификатов',   cat: 'dev', color: '#0ea5e9', icon: 'MessageSquare', url: 'https://t.me/one_ibot' },
   { slug: 'bazzar-market',  name: 'Bazzar Market',       desc: 'Маркетплейс товаров',         cat: 'dev', color: '#10b981', icon: 'Globe' },
@@ -112,7 +114,7 @@ export default function ServicesPage() {
     return (
       <PageContainer>
         <Header title="Сервисы" subtitle="Доступ ограничен" />
-        <div className="card p-12 text-center text-mute text-[13.5px] border border-line bg-white/[0.02] mt-6">
+        <div className="card p-12 text-center text-mute text-[13.5px] border border-line bg-bg mt-6">
           🔐 Доступ ограничен. У вас нет прав для просмотра этого раздела.
         </div>
       </PageContainer>
@@ -136,7 +138,7 @@ export default function ServicesPage() {
               className={`inline-flex items-center gap-1.5 px-3 h-8 rounded-lg text-[12.5px] font-medium transition-all border ${
                 isActive
                   ? 'bg-accent/15 text-accent border-accent/30'
-                  : 'border-line bg-white/[0.02] text-mute hover:text-white hover:bg-white/[0.04] hover:border-line2'
+                  : 'border-line bg-bg text-mute hover:text-slate-800 hover:bg-card-hover hover:border-line2'
               }`}
             >
               {c.emoji} {c.label}
@@ -148,7 +150,7 @@ export default function ServicesPage() {
 
       {/* CEO & Co-owner only notice */}
       {!isCeoOrCoowner && (
-        <div className="mb-4 px-4 py-2.5 rounded-xl bg-white/[0.03] border border-line text-[12.5px] text-mute">
+        <div className="mb-4 px-4 py-2.5 rounded-xl bg-bg border border-line text-[12.5px] text-mute">
           Подключение и отключение сервисов доступно только руководству
         </div>
       )}
@@ -158,12 +160,38 @@ export default function ServicesPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
           {visible.map((s) => {
+            if (s.slug === 'admin') {
+              const isArt = user?.email?.includes('art.koshelev') || user?.role === 'ceo'
+              if (!isArt) return null
+              
+              const IconComponent = ICON_MAP[s.icon] ?? Globe
+              return (
+                <div key={s.slug} className="card p-5 lift group flex flex-col">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-11 h-11 rounded-xl inline-flex items-center justify-center"
+                      style={{ background: `${s.color}22`, color: s.color }}>
+                      <IconComponent size={20} />
+                    </div>
+                    <span className="text-[10.5px] font-semibold px-2 h-5 rounded-full inline-flex items-center bg-accent/15 text-accent">
+                      ● Системный
+                    </span>
+                  </div>
+                  <div className="text-[14px] font-semibold tracking-tight">{s.name}</div>
+                  <div className="text-[12px] text-mute mt-1 flex-1">{s.desc}</div>
+
+                  <a href="/admin" className="mt-4 w-full h-8 rounded-lg text-[12px] font-semibold transition-all border inline-flex items-center justify-center gap-1.5 border-accent/30 text-accent bg-accent/10 hover:bg-accent hover:text-white">
+                    Перейти
+                  </a>
+                </div>
+              )
+            }
+
             const IconComponent = ICON_MAP[s.icon] ?? Globe
             // Use DB state; fall back to false while loading.
             const isOn = loadingDb ? false : (connected[s.slug] ?? false)
 
             return (
-              <div key={s.slug} className="card p-5 lift group">
+              <div key={s.slug} className="card p-5 lift group flex flex-col">
                 <div className="flex items-start justify-between mb-4">
                   <div className="w-11 h-11 rounded-xl inline-flex items-center justify-center"
                     style={{ background: `${s.color}22`, color: s.color }}>
@@ -172,21 +200,21 @@ export default function ServicesPage() {
                   <div className="flex items-center gap-2">
                     {s.url && (
                       <a href={s.url} target="_blank" rel="noopener noreferrer" 
-                        className="w-7 h-7 rounded-full bg-white/[0.03] hover:bg-white/[0.08] flex items-center justify-center text-mute hover:text-white transition-colors"
+                        className="w-7 h-7 rounded-full bg-black/[0.03] hover:bg-black/[0.07] flex items-center justify-center text-mute hover:text-slate-800 transition-colors"
                         title="Открыть сайт"
                       >
                         <ExternalLink size={13} />
                       </a>
                     )}
                     <span className={`text-[10.5px] font-semibold px-2 h-5 rounded-full inline-flex items-center ${
-                      loadingDb ? 'bg-white/[0.05] text-mute' : isOn ? 'bg-ok/15 text-ok' : 'bg-white/[0.05] text-mute'
+                      loadingDb ? 'bg-black/[0.05] text-mute' : isOn ? 'bg-ok/15 text-ok' : 'bg-black/[0.05] text-mute'
                     }`}>
                       {loadingDb ? '…' : isOn ? '● Подключён' : '○ Отключён'}
                     </span>
                   </div>
                 </div>
                 <div className="text-[14px] font-semibold tracking-tight">{s.name}</div>
-                <div className="text-[12px] text-mute mt-1">{s.desc}</div>
+                <div className="text-[12px] text-mute mt-1 flex-1">{s.desc}</div>
 
                 <button
                   onClick={() => toggle(s.slug)}

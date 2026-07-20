@@ -1,0 +1,79 @@
+/* Connect Mobile — color tokens
+   Dark-only iOS-style palette, matched to product photos + repo (Tvinck/connect-mobille src/index.css). */
+:root {
+  /* Base surfaces */
+  --bg: #000000;                 /* app background (photos: pure black) */
+  --surface: #1c1c1e;            /* primary card */
+  --surface-2: #2c2c2e;          /* nested element on card (inner button, tile) */
+  --surface-3: #3a3a3c;          /* pressed / tertiary fill */
+  --hair: rgba(255, 255, 255, 0.06);
+  --hair-strong: rgba(255, 255, 255, 0.12);
+
+  /* Text */
+  --text: #ffffff;
+  --text-2: #a1a1a6;             /* secondary — card subtitles */
+  --text-3: #6e6e73;             /* tertiary — timestamps, inactive nav */
+
+  /* Accent */
+  --accent: #0a84ff;             /* iOS blue — links, active nav, bell, text buttons */
+  --accent-dim: rgba(10, 132, 255, 0.15);
+
+  /* Brand CTA */
+  --yellow: #ffdd2d;             /* primary CTA fill */
+  --on-yellow: #1c1c1e;          /* text on yellow */
+
+  /* Semantic */
+  --green: #2fae5c;
+  --green-dim: rgba(47, 174, 92, 0.15);
+  --red: #ff453a;
+  --red-dim: rgba(255, 69, 58, 0.15);
+  --amber: #ffd60a;
+  --amber-dim: rgba(255, 214, 10, 0.15);
+  --violet: #bf5af2;
+  --violet-dim: rgba(191, 90, 242, 0.15);
+
+  /* Promo banner gradient (photos: green "one-time password" banner) */
+  --promo-grad: linear-gradient(105deg, #2e7d44 0%, #3f9e57 55%, #56b56b 100%); /* @kind color */
+
+  /* Semantic aliases */
+  --surface-card: var(--surface);
+  --surface-inset: var(--surface-2);
+  --text-body: var(--text);
+  --text-muted: var(--text-2);
+  --link: var(--accent);
+  --nav-active: var(--accent);
+  --nav-inactive: var(--text-3);
+
+  --tabbar-bg: rgba(22, 22, 24, 0.92); /* @kind color */
+}
+
+/* Light theme — apply via [data-theme="light"] on a container (or :root).
+   iOS light system palette. */
+[data-theme="light"] {
+  --bg: #f2f2f7;
+  --surface: #ffffff;
+  --surface-2: #ececef;
+  --surface-3: #dedee3;
+  --hair: rgba(0, 0, 0, 0.06);
+  --hair-strong: rgba(0, 0, 0, 0.12);
+
+  --text: #000000;
+  --text-2: #6b6b70;
+  --text-3: #9a9aa0;
+
+  --accent: #007aff;
+  --accent-dim: rgba(0, 122, 255, 0.12);
+
+  --on-yellow: #1c1c1e;
+
+  --green: #2aa952;
+  --green-dim: rgba(42, 169, 82, 0.14);
+  --red: #ff3b30;
+  --red-dim: rgba(255, 59, 48, 0.12);
+  --amber: #e0a800;
+  --amber-dim: rgba(224, 168, 0, 0.16);
+  --violet: #af52de;
+  --violet-dim: rgba(175, 82, 222, 0.14);
+
+  --tabbar-bg: rgba(255, 255, 255, 0.9);
+}

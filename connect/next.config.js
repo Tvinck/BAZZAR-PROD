@@ -17,8 +17,8 @@ const securityHeaders = [
       "script-src 'self' 'unsafe-eval' 'unsafe-inline'",   // unsafe-eval needed by Next.js dev
       "style-src 'self' 'unsafe-inline'",
       "font-src 'self' data:",
-      "img-src 'self' data: blob: https://*.supabase.co https://*.suno.ai https://*.suno.co https://www.google.com https://t1.gstatic.com https://*.steamstatic.com https://*.akamaihd.net",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.suno.ai https://*.suno.co wss://*.suno.ai",
+      "img-src 'self' data: blob: https://*.supabase.co https://*.suno.ai https://*.suno.co https://www.google.com https://*.gstatic.com https://*.steamstatic.com https://*.akamaihd.net",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.suno.ai https://*.suno.co wss://*.suno.ai https://*.workers.dev",
       "media-src 'self' https://*.suno.ai https://*.suno.co https://*.supabase.co https://catbox.moe https://*.catbox.moe blob: data:",
 
       "frame-ancestors 'none'",
@@ -27,6 +27,10 @@ const securityHeaders = [
 ]
 
 const nextConfig = {
+  // Strip console.* in production bundles (keep error/warn for observability).
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
+  },
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: '*.supabase.co' },
@@ -42,7 +46,9 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  experimental: { 
+  experimental: {
+    // Per-icon/function imports instead of pulling whole libraries into each chunk.
+    optimizePackageImports: ['lucide-react', 'date-fns'],
     serverComponentsExternalPackages: ['ioredis', 'ssh2', 'sqlite3', 'fluent-ffmpeg', '@ffmpeg-installer/ffmpeg', '@higgsfield/cli'],
     outputFileTracingIncludes: {
       '/api/**/*': ['./node_modules/@higgsfield/cli/**/*']

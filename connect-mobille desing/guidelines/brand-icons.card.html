@@ -1,0 +1,28 @@
+<!-- @dsCard group="Brand" viewport="700x150" name="Iconography" subtitle="Lucide, 1.8–2.2 stroke — in IconTile chips or bare accent glyphs" -->
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<script src="https://unpkg.com/lucide@0.462.0/dist/umd/lucide.min.js"></script>
+<style>
+.wrap { display: flex; gap: 10px; padding: 16px; align-items: center; }
+.tile { width: 48px; height: 48px; border-radius: 12px; background: var(--surface-3); display: flex; align-items: center; justify-content: center; color: var(--text-2); }
+.tile.g { background: var(--green); color: #fff; }
+.tile.b { background: var(--accent); color: #fff; }
+.tile.y { background: var(--yellow); color: var(--on-yellow); }
+.bare { color: var(--accent); display: flex; align-items: center; padding: 0 6px; }
+</style></head>
+<body>
+<div class="wrap">
+  <span class="tile g"><i data-lucide="shield"></i></span>
+  <span class="tile"><i data-lucide="newspaper"></i></span>
+  <span class="tile"><i data-lucide="chart-line"></i></span>
+  <span class="tile"><i data-lucide="package"></i></span>
+  <span class="tile"><i data-lucide="wallet"></i></span>
+  <span class="tile b"><i data-lucide="message-square"></i></span>
+  <span class="tile y"><i data-lucide="tag"></i></span>
+  <span class="bare"><i data-lucide="bell"></i></span>
+  <span class="bare"><i data-lucide="chevron-left"></i></span>
+  <span class="bare" style="color: var(--text-3);"><i data-lucide="chevron-right"></i></span>
+  <span class="bare" style="color: var(--text-3);"><i data-lucide="ellipsis"></i></span>
+</div>
+<script>lucide.createIcons();</script>
+</body></html>

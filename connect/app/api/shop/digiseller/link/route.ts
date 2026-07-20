@@ -1,19 +1,27 @@
 import { NextResponse } from 'next/server'
+import { getShopCorsHeaders, getCorsOrigin } from '@/lib/cors'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { validateShopRequest } from '@/lib/shop-auth'
 
 export async function POST(request: Request) {
   const supabase = createAdminClient()
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-  }
+  const headers = getShopCorsHeaders(request.headers.get('origin'))
+
+  // Auth check
+  const authError = validateShopRequest(request)
+  if (authError) return authError
 
   try {
     const { uniquecode, udid } = await request.json()
 
     if (!uniquecode || !udid) {
       return NextResponse.json({ success: false, error: 'Missing data' }, { status: 400, headers })
+    }
+
+    // Валидация формата UDID (25-40 hex chars с дефисами)
+    const udidPattern = /^[0-9a-fA-F-]{25,40}$/;
+    if (!udidPattern.test(udid)) {
+      return NextResponse.json({ success: false, error: 'Неверный формат UDID' }, { status: 400, headers })
     }
 
     // 1. Получаем заказ
@@ -36,9 +44,9 @@ export async function POST(request: Request) {
 
     if (order.status === 'linked') {
       return NextResponse.json({ 
-        success: false, 
-        error: 'Этот уникальный код уже привязан к другому устройству.' 
-      }, { status: 400, headers })
+        success: true, 
+        message: 'Этот код уже привязан.' 
+      }, { headers })
     }
 
     await supabase.from('bazzar_users').upsert({
@@ -63,7 +71,7 @@ export async function POST(request: Request) {
     const { data: existingTx } = await supabase
       .from('transactions')
       .select('id')
-      .ilike('description', `%${uniquecode}%`)
+      .ilike('description', `%${uniquecode.replace(/[%_]/g, '\\$&')}%`)
       .maybeSingle();
 
     if (!existingTx && order.amount) {
@@ -91,13 +99,14 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true }, { headers })
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500, headers })
+    console.error('[Digiseller link] Error:', err);
+    return NextResponse.json({ success: false, error: 'Внутренняя ошибка сервера' }, { status: 500, headers })
   }
 }
 
-export async function OPTIONS() {
+export async function OPTIONS(request: Request) {
   return new NextResponse(null, { headers: {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': getCorsOrigin(request?.headers?.get('origin') || null),
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
   } })

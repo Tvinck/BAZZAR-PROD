@@ -44,6 +44,20 @@ export default async function ProjectDetailPage({ params }: PageProps) {
 
   if (!project) notFound()
 
+  const isCeoOrCoowner = profile.role === 'ceo' || profile.role === 'coowner'
+  
+  if (!isCeoOrCoowner) {
+    const { data: mems } = await supabase
+      .from('project_members')
+      .select('project_id')
+      .eq('user_id', profile.id)
+      .eq('project_id', project.id)
+      
+    if (!mems || mems.length === 0) {
+      redirect('/projects')
+    }
+  }
+
   // 3. Параллельный асинхронный запрос всех базовых сущностей проекта
   const [
     { data: members },
@@ -184,15 +198,7 @@ export default async function ProjectDetailPage({ params }: PageProps) {
   }
 
   // 6. Динамическая загрузка данных Bazzar Serts
-  const isBazzarCerts = params.slug === 'bazzar-certs' || params.slug === 'bazzar-serts' || params.slug === 'bazzar'
-  if (isBazzarCerts) {
-    const { BazzarCertsPanel } = await import('@/components/projects/BazzarCertsPanel')
-    return (
-      <PageContainer>
-        <BazzarCertsPanel />
-      </PageContainer>
-    )
-  }
+  // Bazzar Serts specific components are now handled dynamically in ProjectDetail tabs
 
   // 7. Динамическая загрузка данных ПодариМомент
   const isPm = params.slug === 'podarimoment' || params.slug === 'pm' || params.slug === 'podari-moment'

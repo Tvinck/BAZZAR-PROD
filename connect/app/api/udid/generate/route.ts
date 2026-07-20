@@ -1,14 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(req: NextRequest) {
-  // Get the host dynamically so it works locally and in production
+  // Use the canonical URL for the receive endpoint.
+  // On Vercel, req.headers.get('host') may return the internal hostname,
+  // so we use the production URL explicitly, with localhost fallback for dev.
   const host = req.headers.get('host') || 'localhost:3000';
-  const protocol = host.includes('localhost') ? 'http' : 'https';
+  const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
   
-  // The URL where the iPhone will POST the device info
-  const receiveUrl = `${protocol}://${host}/api/udid/receive`;
+  // Always use the production domain for the callback URL,
+  // because iOS will POST to this URL from the device (not from the browser).
+  const receiveUrl = isLocal
+    ? `http://${host}/api/udid/receive`
+    : `https://connect-4va6.vercel.app/api/udid/receive`;
 
-  // The XML Payload for Apple OTA Profile Delivery
+  // Apple OTA Profile Service — correct structure per Apple documentation.
+  // IMPORTANT: The XML must have NO leading whitespace before <?xml ...>
+  // otherwise iOS will reject it as invalid.
   const mobileConfig = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -24,31 +31,32 @@ export async function GET(req: NextRequest) {
             <string>ICCID</string>
             <string>VERSION</string>
             <string>PRODUCT</string>
+            <string>SERIAL</string>
+            <string>MAC_ADDRESS_EN0</string>
         </array>
     </dict>
     <key>PayloadOrganization</key>
-    <string>Bazzar Market</string>
+    <string>Bazzar Certs</string>
     <key>PayloadDisplayName</key>
-    <string>Регистрация устройства в Bazzar Market</string>
+    <string>Bazzar Certs — UDID</string>
     <key>PayloadVersion</key>
     <integer>1</integer>
     <key>PayloadUUID</key>
     <string>9F025114-16CA-4AE1-B0E3-F5E5170B1E6E</string>
     <key>PayloadIdentifier</key>
-    <string>com.bazzar.market.profile-service</string>
+    <string>com.bazzar.certs.enroll</string>
     <key>PayloadDescription</key>
-    <string>Установите этот профиль, чтобы система могла автоматически получить ваш UDID и авторизовать вас.</string>
+    <string>Этот профиль нужен для получения UDID вашего устройства. Он будет автоматически удалён после установки.</string>
     <key>PayloadType</key>
     <string>Profile Service</string>
 </dict>
 </plist>`;
 
-  // Must return the correct content type for iOS to recognize it as a configuration profile
-  return new NextResponse(mobileConfig, {
+  return new NextResponse(mobileConfig.trim(), {
     status: 200,
     headers: {
-      'Content-Type': 'application/x-apple-aspen-config',
-      'Content-Disposition': 'attachment; filename="bazzar-market-enroll.mobileconfig"',
+      'Content-Type': 'application/x-apple-aspen-config; charset=utf-8',
+      'Content-Disposition': 'attachment; filename="bazzar-enroll.mobileconfig"',
     },
   });
 }

@@ -1,0 +1,25 @@
+/* Connect Mobile — spacing, radii, elevation */
+:root {
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+
+  /* Radii — photos use large, soft iOS corners */
+  --radius-sm: 10px;    /* badges, chips */
+  --radius: 16px;       /* inner buttons, tiles, fields */
+  --radius-lg: 24px;    /* cards, banners */
+  --radius-pill: 999px;
+
+  /* Layout */
+  --screen-pad: 16px;
+  --card-pad: 20px;
+  --tabbar-h: 82px;
+
+  /* Elevation — dark UI relies on surface color, not shadows */
+  --shadow-none: none;
+  --shadow-sheet: 0 -8px 32px rgba(0, 0, 0, 0.6);
+}

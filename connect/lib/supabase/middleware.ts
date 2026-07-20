@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { getCorsOrigin } from '@/lib/cors'
 
 const PUBLIC_PATHS = ['/login', '/forgot-password']
 
@@ -20,11 +21,12 @@ export async function updateSession(request: NextRequest) {
 
   // Handle CORS preflight OPTIONS requests for API routes
   if (isApi && request.method === 'OPTIONS') {
+    const corsOrigin = getCorsOrigin(request.headers.get('origin'))
     return new NextResponse(null, {
       status: 204,
       headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Origin': corsOrigin,
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Access-Control-Max-Age': '86400',
       },
@@ -77,8 +79,9 @@ export async function updateSession(request: NextRequest) {
 
   // Append CORS headers for other API methods
   if (isApi) {
-    response.headers.set('Access-Control-Allow-Origin', '*')
-    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+    const corsOrigin = getCorsOrigin(request.headers.get('origin'))
+    response.headers.set('Access-Control-Allow-Origin', corsOrigin)
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
     response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
   }
 
