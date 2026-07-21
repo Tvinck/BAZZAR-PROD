@@ -38,6 +38,134 @@ interface Device {
 
 // Devices loaded from apple_certificates in Supabase
 
+/* ── My Apps Tab (loads from user_app_purchases) ── */
+function MyAppsTab({ udid }: { udid: string | null }) {
+  const [purchases, setPurchases] = useState<Array<{
+    id: string; status: string; amount: number; created_at: string;
+    app: { id: string; name: string; version: string; icon_url: string | null; ipa_url: string | null; description: string | null } | null
+  }>>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!udid) { setLoading(false); return }
+    ;(async () => {
+      const { data, error } = await supabase
+        .from('user_app_purchases')
+        .select('id, status, amount, created_at, app:bazzar_apps(id, name, version, icon_url, ipa_url, description)')
+        .eq('udid', udid)
+        .in('status', ['paid', 'free'])
+        .order('created_at', { ascending: false })
+      if (!error && data) setPurchases(data as any)
+      setLoading(false)
+    })()
+  }, [udid])
+
+  if (loading) {
+    return (
+      <div className="card" style={{ padding: 'var(--sp-6)', textAlign: 'center' }}>
+        <Loader2 size={24} className="animate-spin" style={{ margin: '0 auto 12px', color: 'var(--accent)' }} />
+        <p style={{ color: 'var(--text-3)', fontSize: '0.85rem' }}>Загрузка...</p>
+      </div>
+    )
+  }
+
+  if (purchases.length === 0) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-4)' }}>
+        <div className="card" style={{ padding: 'var(--sp-6)', textAlign: 'center' }}>
+          <Smartphone size={48} style={{ color: 'var(--text-3)', opacity: 0.3, marginBottom: 16 }} />
+          <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: 8 }}>Нет установленных приложений</h4>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-3)', maxWidth: 340, margin: '0 auto 20px' }}>
+            Установленные и купленные приложения появятся здесь.
+          </p>
+          <Link to="/catalog?category=apps" className="btn btn-gradient" style={{ padding: '12px 28px', borderRadius: 'var(--r-md)', gap: 8 }}>
+            <ShoppingBag size={16} /> Каталог приложений
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-3)' }}>
+      <div style={{ fontSize: '0.82rem', color: 'var(--text-3)', marginBottom: 4 }}>
+        {purchases.length} {purchases.length === 1 ? 'приложение' : purchases.length < 5 ? 'приложения' : 'приложений'}
+      </div>
+      {purchases.map((p) => {
+        const app = p.app
+        if (!app) return null
+        return (
+          <div key={p.id} className="card" style={{
+            padding: 'var(--sp-4)', display: 'flex', alignItems: 'center', gap: 14,
+          }}>
+            {/* Icon */}
+            <div style={{
+              width: 56, height: 56, borderRadius: 14,
+              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              overflow: 'hidden', flexShrink: 0,
+            }}>
+              {app.icon_url ? (
+                <img src={app.icon_url} alt="" width={56} height={56} style={{ objectFit: 'cover', borderRadius: 14 }} />
+              ) : (
+                <Smartphone size={24} style={{ color: 'var(--text-3)' }} />
+              )}
+            </div>
+
+            {/* Info */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 700, fontSize: '0.92rem', marginBottom: 2 }}>{app.name}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{
+                  fontSize: '0.7rem', padding: '2px 8px', borderRadius: 'var(--r-full)',
+                  background: 'rgba(149,51,255,0.1)', color: 'var(--accent)',
+                }}>
+                  v{app.version}
+                </span>
+                <span style={{
+                  fontSize: '0.7rem', padding: '2px 8px', borderRadius: 'var(--r-full)',
+                  background: p.status === 'paid' ? 'rgba(34,197,94,0.1)' : 'rgba(59,130,246,0.1)',
+                  color: p.status === 'paid' ? '#22C55E' : '#3b82f6',
+                }}>
+                  {p.status === 'paid' ? `Куплено · ${p.amount} ₽` : 'Бесплатно'}
+                </span>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>
+                  {new Date(p.created_at).toLocaleDateString('ru-RU')}
+                </span>
+              </div>
+            </div>
+
+            {/* Download */}
+            {app.ipa_url && (
+              <a
+                href={app.ipa_url}
+                download
+                style={{
+                  padding: '8px 16px', borderRadius: 'var(--r-md)',
+                  background: 'linear-gradient(135deg, #af66ff, #6e00e5)',
+                  color: '#fff', textDecoration: 'none',
+                  fontSize: '0.8rem', fontWeight: 600,
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  flexShrink: 0,
+                }}
+              >
+                <Download size={14} /> IPA
+              </a>
+            )}
+          </div>
+        )
+      })}
+
+      <Link to="/catalog?category=apps" style={{
+        textAlign: 'center', padding: '12px', fontSize: '0.85rem',
+        color: 'var(--accent)', textDecoration: 'none', fontWeight: 600,
+      }}>
+        Каталог приложений →
+      </Link>
+    </div>
+  )
+}
+
 export function Cabinet() {
   const { t } = useI18n()
   usePageTitle(t('cabinet.login.title'))
@@ -899,20 +1027,7 @@ export function Cabinet() {
             )}
 
             {/* ── Мои приложения ── */}
-            {tab === 'apps' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-4)' }}>
-                <div className="card" style={{ padding: 'var(--sp-6)', textAlign: 'center' }}>
-                  <Smartphone size={48} style={{ color: 'var(--text-3)', opacity: 0.3, marginBottom: 16 }} />
-                  <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: 8 }}>Нет установленных приложений</h4>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-3)', maxWidth: 340, margin: '0 auto 20px' }}>
-                    Установленные приложения появятся здесь после покупки.
-                  </p>
-                  <Link to="/catalog?category=apps" className="btn btn-gradient" style={{ padding: '12px 28px', borderRadius: 'var(--r-md)', gap: 8 }}>
-                    <ShoppingBag size={16} /> {t('cabinet.apps.allApps')}
-                  </Link>
-                </div>
-              </div>
-            )}
+            {tab === 'apps' && <MyAppsTab udid={udid} />}
 
             {/* ── Мои устройства ── */}
             {tab === 'devices' && (

@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Star, Flame, Sparkles, Tag, X, Smartphone } from 'lucide-react'
+import { Star, Flame, Sparkles, Tag, X, Smartphone, Download, Loader2, Check } from 'lucide-react'
 import type { Product } from '../types'
 import { useI18n } from '../hooks/useI18n'
+
+const API_BASE = 'https://connect-4va6.vercel.app'
 
 interface Props {
   product: Product
@@ -14,7 +16,62 @@ export function ProductCard({ product, index = 0 }: Props) {
   const { t } = useI18n()
   const accentColor = '#a78bfa'
   const isApp = product.category === 'apps'
-  const [showComingSoon, setShowComingSoon] = useState(false)
+  const [showModal, setShowModal] = useState(false)
+  const [buying, setBuying] = useState(false)
+  const [bought, setBought] = useState(false)
+  const [email, setEmail] = useState(() => localStorage.getItem('bazzar_email') || '')
+
+  const isPaid = isApp && product.price > 0
+
+  // ── Purchase / Install handler ──
+  const handlePurchase = async () => {
+    const udid = localStorage.getItem('apple_udid')
+    if (!udid) {
+      setShowModal(true)
+      return
+    }
+
+    if (isPaid && !email.trim()) {
+      setShowModal(true)
+      return
+    }
+
+    setBuying(true)
+    try {
+      const res = await fetch(`${API_BASE}/api/shop/app-purchase`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          appId: product.id,
+          udid,
+          email: email.trim() || undefined,
+        }),
+      })
+      const json = await res.json()
+
+      if (json.alreadyOwned) {
+        setBought(true)
+        return
+      }
+
+      if (json.free) {
+        setBought(true)
+        return
+      }
+
+      if (json.paymentUrl) {
+        localStorage.setItem('bazzar_email', email.trim())
+        window.location.href = json.paymentUrl
+        return
+      }
+
+      alert(json.error || 'Ошибка. Попробуйте позже.')
+    } catch {
+      alert('Ошибка сети. Попробуйте позже.')
+    } finally {
+      setBuying(false)
+    }
+  }
 
   const cardContent = (
     <div className="card card-hover" style={{
@@ -95,11 +152,11 @@ export function ProductCard({ product, index = 0 }: Props) {
           <span style={{ fontSize: '0.72rem', color: 'var(--text-3)', marginLeft: 4 }}>{product.sold > 0 ? `${product.sold.toLocaleString('ru-RU')} ${t('product.sales')}` : t('badge.new')}</span>
         </div>
 
-        {/* Price / Install button */}
+        {/* Price / Buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingTop: 4 }}>
           {isApp ? (
             <div style={{ display: 'flex', gap: 6, width: '100%', alignItems: 'center' }}>
-              {product.price === 0 && product.ipa_url ? (
+              {product.price === 0 && product.ipa_url && (
                 <a
                   href={product.ipa_url}
                   download
@@ -113,20 +170,29 @@ export function ProductCard({ product, index = 0 }: Props) {
                     display: 'flex', alignItems: 'center', gap: 4,
                   }}
                 >
-                  Скачать
+                  <Download size={12} /> IPA
                 </a>
-              ) : product.price > 0 ? (
-                <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1rem' }}>
+              )}
+              {product.price > 0 && (
+                <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.92rem' }}>
                   {product.price} ₽
                 </span>
-              ) : null}
-              <span style={{
-                fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.78rem',
-                padding: '5px 14px', borderRadius: 'var(--r-full)',
-                background: 'linear-gradient(135deg, #af66ff, #6e00e5)',
-                color: '#fff',
-              }}>
-                Установить
+              )}
+              <span
+                onClick={(e) => { e.stopPropagation(); e.preventDefault(); handlePurchase() }}
+                style={{
+                  fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.78rem',
+                  padding: '5px 14px', borderRadius: 'var(--r-full)',
+                  background: bought
+                    ? 'linear-gradient(135deg, #22C55E, #16a34a)'
+                    : 'linear-gradient(135deg, #af66ff, #6e00e5)',
+                  color: '#fff', cursor: buying ? 'wait' : 'pointer',
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  opacity: buying ? 0.7 : 1, transition: 'opacity 200ms',
+                  marginLeft: 'auto',
+                }}
+              >
+                {buying ? <Loader2 size={12} className="animate-spin" /> : bought ? <><Check size={12} /> Добавлено</> : 'Установить'}
               </span>
             </div>
           ) : (
@@ -155,9 +221,7 @@ export function ProductCard({ product, index = 0 }: Props) {
         transition={{ delay: index * 0.05, duration: 0.3 }}
       >
         {isApp ? (
-          <div onClick={() => setShowComingSoon(true)}>
-            {cardContent}
-          </div>
+          <div>{cardContent}</div>
         ) : (
           <Link to={`/product/${product.id}`}>
             {cardContent}
@@ -165,15 +229,15 @@ export function ProductCard({ product, index = 0 }: Props) {
         )}
       </motion.div>
 
-      {/* Coming Soon Modal */}
+      {/* Purchase/UDID Modal */}
       <AnimatePresence>
-        {showComingSoon && (
+        {showModal && (
           <>
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setShowComingSoon(false)}
+              onClick={() => setShowModal(false)}
               style={{
                 position: 'fixed', inset: 0,
                 background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
@@ -189,7 +253,7 @@ export function ProductCard({ product, index = 0 }: Props) {
                 position: 'fixed',
                 top: '50%', left: '50%',
                 transform: 'translate(-50%, -50%)',
-                width: 'min(380px, 90vw)',
+                width: 'min(400px, 90vw)',
                 background: 'var(--bg-3, #1a1a2e)',
                 border: '1px solid var(--border, rgba(255,255,255,0.08))',
                 borderRadius: 'var(--r-xl, 20px)',
@@ -200,7 +264,7 @@ export function ProductCard({ product, index = 0 }: Props) {
             >
               {/* Close */}
               <button
-                onClick={() => setShowComingSoon(false)}
+                onClick={() => setShowModal(false)}
                 style={{
                   position: 'absolute', top: 14, right: 14,
                   width: 28, height: 28, borderRadius: '50%',
@@ -227,16 +291,10 @@ export function ProductCard({ product, index = 0 }: Props) {
                 )}
               </div>
 
-              {/* Title */}
-              <h3 style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: '1.15rem', fontWeight: 700,
-                marginBottom: 8,
-              }}>
+              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', fontWeight: 700, marginBottom: 8 }}>
                 {product.title}
               </h3>
 
-              {/* Price tag for paid apps */}
               {product.price > 0 && (
                 <div style={{
                   display: 'inline-block',
@@ -251,40 +309,72 @@ export function ProductCard({ product, index = 0 }: Props) {
                 </div>
               )}
 
-              {/* Message */}
-              <p style={{
-                color: 'var(--text-2, #999)',
-                fontSize: '0.88rem', lineHeight: 1.6,
-                marginBottom: 24,
-              }}>
-                {product.price > 0
-                  ? <>Покупка и установка приложений через сайт скоро будет доступна.<br />Следите за обновлениями!</>
-                  : <>Скоро будет доступна подпись приложений через&nbsp;сайт.<br />Следите за обновлениями!</>
-                }
-              </p>
+              {/* No UDID — need to get it */}
+              {!localStorage.getItem('apple_udid') ? (
+                <>
+                  <p style={{ color: 'var(--text-2, #999)', fontSize: '0.88rem', lineHeight: 1.6, marginBottom: 20 }}>
+                    Для установки приложения необходимо получить UDID вашего устройства.
+                  </p>
+                  <Link
+                    to="/get-udid"
+                    onClick={() => setShowModal(false)}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 8,
+                      padding: '12px 28px', borderRadius: 'var(--r-full)',
+                      background: 'linear-gradient(135deg, #af66ff, #6e00e5)',
+                      color: '#fff', fontWeight: 700, fontSize: '0.92rem',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    <Smartphone size={16} /> Получить UDID
+                  </Link>
+                </>
+              ) : (
+                <>
+                  {/* Has UDID — show email for paid or confirm for free */}
+                  {isPaid && (
+                    <div style={{ marginBottom: 16, textAlign: 'left' }}>
+                      <label style={{ fontSize: '0.78rem', color: 'var(--text-3)', display: 'block', marginBottom: 6 }}>
+                        Email для чека:
+                      </label>
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="your@email.com"
+                        style={{
+                          width: '100%', padding: '12px 16px',
+                          borderRadius: 'var(--r-md)', border: '1px solid var(--border)',
+                          background: 'rgba(255,255,255,0.04)', color: 'var(--text)',
+                          fontSize: '0.92rem', outline: 'none', fontFamily: 'inherit',
+                        }}
+                      />
+                    </div>
+                  )}
 
-              {/* Decorative line */}
-              <div style={{
-                height: 3, width: 48, borderRadius: 2,
-                background: 'linear-gradient(90deg, #af66ff, #6e00e5)',
-                margin: '0 auto 20px',
-              }} />
+                  <p style={{ color: 'var(--text-2, #999)', fontSize: '0.82rem', lineHeight: 1.5, marginBottom: 20 }}>
+                    {isPaid
+                      ? 'После оплаты приложение появится в вашем кабинете.'
+                      : 'Приложение будет добавлено в ваш кабинет.'}
+                  </p>
 
-              {/* Close button */}
-              <button
-                onClick={() => setShowComingSoon(false)}
-                style={{
-                  width: '100%', padding: '12px 20px',
-                  borderRadius: 'var(--r-full, 50px)',
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  color: 'var(--text, #fff)', fontSize: '0.88rem',
-                  fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-                  transition: 'all 200ms',
-                }}
-              >
-                Понятно
-              </button>
+                  <button
+                    onClick={() => { setShowModal(false); handlePurchase() }}
+                    disabled={buying || (isPaid && !email.trim())}
+                    style={{
+                      width: '100%', padding: '14px 24px',
+                      borderRadius: 'var(--r-full)', border: 'none',
+                      background: 'linear-gradient(135deg, #af66ff, #6e00e5)',
+                      color: '#fff', fontWeight: 700, fontSize: '0.95rem',
+                      cursor: buying ? 'wait' : 'pointer', fontFamily: 'inherit',
+                      opacity: (buying || (isPaid && !email.trim())) ? 0.5 : 1,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    }}
+                  >
+                    {buying ? 'Обработка...' : isPaid ? `Купить за ${product.price} ₽` : 'Установить бесплатно'}
+                  </button>
+                </>
+              )}
             </motion.div>
           </>
         )}
