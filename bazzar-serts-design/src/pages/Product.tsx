@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Star, Shield, Zap, Clock, Heart, Check, ArrowRight, Truck, RefreshCcw, Headphones, Flame, Sparkles, Tag, Gift, TrendingUp, CreditCard, Smartphone, ShieldAlert, X } from 'lucide-react'
+import { Star, Shield, Zap, Clock, Heart, Check, ArrowRight, Truck, RefreshCcw, Headphones, Flame, Sparkles, Tag, Gift, TrendingUp, CreditCard, Smartphone, ShieldAlert } from 'lucide-react'
 import { useProduct } from '../hooks/useProducts'
 import { ProductCard } from '../components/ProductCard'
 import { ShareButtons } from '../components/ShareButtons'

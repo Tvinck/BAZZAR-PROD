@@ -1,15 +1,34 @@
+import { rateLimit } from '../lib/rate-limit.js';
+import crypto from 'crypto';
+
+const limiter = rateLimit({ windowMs: 60_000, max: 15 });
+
 export default function handler(req, res) {
+  // Rate limit
+  const { allowed, retryAfter } = limiter.check(req);
+  if (!allowed) {
+    res.setHeader('Retry-After', Math.ceil(retryAfter / 1000));
+    return res.status(429).send('Too Many Requests');
+  }
+
   if (req.method !== 'GET') {
     return res.status(405).send('Method Not Allowed');
   }
 
-  const host = req.headers.host || 'localhost:5174';
+  const host = req.headers.host || 'bazzar-serts.shop';
   const protocol = host.includes('localhost') ? 'http' : 'https';
   const receiveUrl = `${protocol}://${host}/api/udid/receive`;
 
+  // Generate unique UUID for each request to avoid profile caching issues
+  const uuid = crypto.randomUUID();
+
   // Apple OTA Profile Service enrollment profile.
-  // CRITICAL: Do NOT request IMEI/ICCID — iOS 15+ rejects profiles that request these.
-  // Only UDID, VERSION, PRODUCT, SERIAL are allowed on modern iOS.
+  // IMPORTANT:
+  //  - Only request UDID and PRODUCT (model). iOS 15+ blocks IMEI/ICCID/SERIAL requests.
+  //  - PayloadRemovalDisallowed must be false (temporary profile).
+  //  - Content-Type must be application/x-apple-aspen-config
+  //  - Profile is unsigned but valid — iOS will show "not verified" warning, 
+  //    but user can proceed in Settings > General > VPN & Device Management.
   const xml = [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">',
@@ -22,29 +41,31 @@ export default function handler(req, res) {
     '    <key>DeviceAttributes</key>',
     '    <array>',
     '      <string>UDID</string>',
-    '      <string>VERSION</string>',
     '      <string>PRODUCT</string>',
     '    </array>',
     '  </dict>',
     '  <key>PayloadOrganization</key>',
-    '  <string>Bazzar Market</string>',
+    '  <string>BAZZAR Certs</string>',
     '  <key>PayloadDisplayName</key>',
-    '  <string>Bazzar Market</string>',
+    '  <string>BAZZAR — Получение UDID</string>',
     '  <key>PayloadVersion</key>',
     '  <integer>1</integer>',
     '  <key>PayloadUUID</key>',
-    '  <string>9F025114-16CA-4AE1-B0E3-F5E5170B1E6E</string>',
+    `  <string>${uuid}</string>`,
     '  <key>PayloadIdentifier</key>',
-    '  <string>com.bazzar.market.profile-service</string>',
+    '  <string>shop.bazzar-serts.udid-enrollment</string>',
     '  <key>PayloadDescription</key>',
-    '  <string>This temporary profile is used to find the UDID of your device. It can be removed after installation.</string>',
+    '  <string>Временный профиль для определения UDID вашего устройства. Запрашивает только идентификатор устройства (UDID) и модель. Профиль можно удалить сразу после установки.</string>',
     '  <key>PayloadType</key>',
     '  <string>Profile Service</string>',
+    '  <key>PayloadRemovalDisallowed</key>',
+    '  <false/>',
     '</dict>',
     '</plist>',
   ].join('\n');
 
   res.setHeader('Content-Type', 'application/x-apple-aspen-config');
-  res.setHeader('Content-Disposition', 'attachment; filename="enroll.mobileconfig"');
+  res.setHeader('Content-Disposition', 'attachment; filename="bazzar-udid.mobileconfig"');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.status(200).send(xml);
 }

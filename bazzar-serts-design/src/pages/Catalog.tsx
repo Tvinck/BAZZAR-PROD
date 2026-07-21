@@ -20,6 +20,7 @@ export function Catalog() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [query, setQuery] = useState(searchParams.get('q') || '')
   const [category, setCategory] = useState(searchParams.get('category') || 'all')
+  const buyId = searchParams.get('buy') // возврат после регистрации → открыть оплату приложения
 
   const CATS = [
     { id: 'all', label: t('cat.all') },
@@ -142,7 +143,7 @@ export function Catalog() {
           </motion.div>
         ) : (
           <div className="grid-products">
-            {filtered.map((p, i) => <ProductCard key={p.id} product={p} index={i} />)}
+            {filtered.map((p, i) => <ProductCard key={p.id} product={p} index={i} autoStart={!!buyId && buyId === p.id} />)}
           </div>
         )}
       </div>

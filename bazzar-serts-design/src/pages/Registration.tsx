@@ -5,7 +5,7 @@ import {
   Smartphone, CreditCard, Shield, AlertTriangle, Check,
   ChevronRight, Mail, Loader2, ExternalLink, Info, Lock
 } from 'lucide-react'
-import { useI18n } from '../hooks/useI18n'
+import { SafariHint } from '../components/SafariHint'
 
 /* ═══════════════════════════════════════════════════════════
    Registration — Manual registration for Avito customers
@@ -119,7 +119,6 @@ function StepProgress({ currentStep, hasUdid }: { currentStep: number; hasUdid: 
 /* ── Main Component ───────────────────────────────────────── */
 
 export function Registration() {
-  const { t } = useI18n()
   const { code } = useParams<{ code: string }>()
 
   const [reg, setReg] = useState<RegData | null>(null)
@@ -492,6 +491,8 @@ export function Registration() {
                       </div>
                     ))}
                   </div>
+
+                  <SafariHint />
 
                   <button
                     onClick={handleGetUdid}

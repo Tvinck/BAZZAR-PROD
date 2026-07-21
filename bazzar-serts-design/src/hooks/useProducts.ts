@@ -50,6 +50,7 @@ export function useProducts() {
           ipa_url: app.ipa_url || '',
           stock: app.ipa_url ? 999 : 0,
           active: true,
+          created_at: app.created_at || new Date().toISOString(),
         }));
 
         if (isMounted) setProducts([...(productsRes.data || []), ...appProducts]);

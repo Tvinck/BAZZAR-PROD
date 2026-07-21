@@ -1,19 +1,24 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Star, Flame, Sparkles, Tag, X, Smartphone, Download, Loader2, Check } from 'lucide-react'
+import { Star, Flame, Sparkles, Tag, X, Smartphone, ShoppingBag, Download, Loader2, Check } from 'lucide-react'
 import type { Product } from '../types'
 import { useI18n } from '../hooks/useI18n'
+import { useOwnedApps } from '../hooks/useOwnedApps'
+import { installTarget } from '../lib/appInstall'
 
 const API_BASE = 'https://connect-4va6.vercel.app'
 
 interface Props {
   product: Product
   index?: number
+  /** Автооткрытие покупки (возврат после регистрации: /catalog?...&buy=<id>) */
+  autoStart?: boolean
 }
 
-export function ProductCard({ product, index = 0 }: Props) {
+export function ProductCard({ product, index = 0, autoStart = false }: Props) {
   const { t } = useI18n()
+  const { owned, markOwned } = useOwnedApps()
   const accentColor = '#a78bfa'
   const isApp = product.category === 'apps'
   const [showModal, setShowModal] = useState(false)
@@ -22,6 +27,25 @@ export function ProductCard({ product, index = 0 }: Props) {
   const [email, setEmail] = useState(() => localStorage.getItem('bazzar_email') || '')
 
   const isPaid = isApp && product.price > 0
+  const hasAccess = isApp && (!isPaid || owned.has(product.id) || bought) // можно устанавливать
+  const install = installTarget(product.ipa_url)
+
+  // Возврат после регистрации — сразу открываем оплату нужного приложения
+  useEffect(() => {
+    if (autoStart && isApp && isPaid && !hasAccess) setShowModal(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStart])
+
+  // Бесплатное — фиксируем установку в кабинете (в фоне)
+  const recordFree = () => {
+    const uid = localStorage.getItem('apple_udid')
+    if (!uid || isPaid) return
+    fetch(`${API_BASE}/api/shop/app-purchase`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ appId: product.id, udid: uid }),
+    }).catch(() => {})
+  }
 
   // ── Purchase / Install handler ──
   const handlePurchase = async () => {
@@ -49,13 +73,9 @@ export function ProductCard({ product, index = 0 }: Props) {
       })
       const json = await res.json()
 
-      if (json.alreadyOwned) {
+      if (json.alreadyOwned || json.free) {
         setBought(true)
-        return
-      }
-
-      if (json.free) {
-        setBought(true)
+        markOwned(product.id)
         return
       }
 
@@ -156,44 +176,58 @@ export function ProductCard({ product, index = 0 }: Props) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingTop: 4 }}>
           {isApp ? (
             <div style={{ display: 'flex', gap: 6, width: '100%', alignItems: 'center' }}>
-              {product.price === 0 && product.ipa_url && (
-                <a
-                  href={product.ipa_url}
-                  download
-                  onClick={(e) => e.stopPropagation()}
-                  style={{
-                    fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: '0.78rem',
-                    padding: '5px 12px', borderRadius: 'var(--r-full)',
-                    background: 'rgba(255,255,255,0.06)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    color: 'var(--text-2, #ccc)', textDecoration: 'none',
-                    display: 'flex', alignItems: 'center', gap: 4,
-                  }}
-                >
-                  <Download size={12} /> IPA
-                </a>
-              )}
-              {product.price > 0 && (
+              {/* Статус: цена (не куплено) / Куплено / Бесплатно */}
+              {isPaid && !hasAccess ? (
                 <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.92rem' }}>
                   {product.price} ₽
                 </span>
+              ) : isPaid ? (
+                <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#22C55E', display: 'flex', alignItems: 'center', gap: 3 }}>
+                  <Check size={12} /> Куплено
+                </span>
+              ) : (
+                <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#3b82f6' }}>Бесплатно</span>
               )}
-              <span
-                onClick={(e) => { e.stopPropagation(); e.preventDefault(); handlePurchase() }}
-                style={{
-                  fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.78rem',
-                  padding: '5px 14px', borderRadius: 'var(--r-full)',
-                  background: bought
-                    ? 'linear-gradient(135deg, #22C55E, #16a34a)'
-                    : 'linear-gradient(135deg, #af66ff, #6e00e5)',
-                  color: '#fff', cursor: buying ? 'wait' : 'pointer',
-                  display: 'flex', alignItems: 'center', gap: 4,
-                  opacity: buying ? 0.7 : 1, transition: 'opacity 200ms',
-                  marginLeft: 'auto',
-                }}
-              >
-                {buying ? <Loader2 size={12} className="animate-spin" /> : bought ? <><Check size={12} /> Добавлено</> : 'Установить'}
-              </span>
+
+              {hasAccess ? (
+                install.mode === 'none' ? (
+                  <span style={{
+                    fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.78rem',
+                    padding: '5px 14px', borderRadius: 'var(--r-full)', marginLeft: 'auto',
+                    background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+                    color: 'var(--text-3, #888)',
+                  }}>Скоро</span>
+                ) : (
+                  <a
+                    href={install.href}
+                    {...(install.mode === 'download' ? { download: true } : {})}
+                    onClick={(e) => { e.stopPropagation(); recordFree() }}
+                    style={{
+                      fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.78rem',
+                      padding: '5px 14px', borderRadius: 'var(--r-full)', marginLeft: 'auto',
+                      background: 'linear-gradient(135deg, #af66ff, #6e00e5)',
+                      color: '#fff', textDecoration: 'none',
+                      display: 'flex', alignItems: 'center', gap: 4,
+                    }}
+                  >
+                    <Download size={12} /> {install.label}
+                  </a>
+                )
+              ) : (
+                <span
+                  onClick={(e) => { e.stopPropagation(); e.preventDefault(); handlePurchase() }}
+                  style={{
+                    fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.78rem',
+                    padding: '5px 14px', borderRadius: 'var(--r-full)', marginLeft: 'auto',
+                    background: 'linear-gradient(135deg, #af66ff, #6e00e5)',
+                    color: '#fff', cursor: buying ? 'wait' : 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 4,
+                    opacity: buying ? 0.7 : 1, transition: 'opacity 200ms',
+                  }}
+                >
+                  {buying ? <Loader2 size={12} className="animate-spin" /> : <><ShoppingBag size={12} /> Купить</>}
+                </span>
+              )}
             </div>
           ) : (
             <>
@@ -317,7 +351,11 @@ export function ProductCard({ product, index = 0 }: Props) {
                   </p>
                   <Link
                     to="/get-udid"
-                    onClick={() => setShowModal(false)}
+                    onClick={() => {
+                      // сохраняем намерение — после регистрации (/auth) вернёмся к оплате этого приложения
+                      localStorage.setItem('pending_app_purchase', JSON.stringify({ appId: product.id }))
+                      setShowModal(false)
+                    }}
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: 8,
                       padding: '12px 28px', borderRadius: 'var(--r-full)',

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, ChevronDown, Star, ArrowRight, Shield, Zap, Headphones, CreditCard, Check, Smartphone, Tablet, Music, Users, TrendingUp } from 'lucide-react'
+import { Search, ChevronDown, Star, ArrowRight, Shield, Zap, Headphones, CreditCard, Check, Smartphone, Tablet, Music, TrendingUp } from 'lucide-react'
 import { useProducts } from '../hooks/useProducts'
 import { ProductCard } from '../components/ProductCard'
 import { DynamicIcon } from '../components/DynamicIcon'
@@ -81,7 +81,7 @@ export function Home() {
   const { t } = useI18n()
 
   const { products, loading } = useProducts()
-  const { reviews: liveReviews, loading: reviewsLoading } = useReviews()
+  const { reviews: liveReviews } = useReviews()
 
   /* ── Client counter (база 1757 + реальные заказы, из /api/stats) ── */
   const [clientCount, setClientCount] = useState(1757)

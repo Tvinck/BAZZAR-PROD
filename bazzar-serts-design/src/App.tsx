@@ -1,8 +1,8 @@
-import { useState, useEffect, type ReactNode } from 'react'
-import { Routes, Route, useLocation, useNavigate } from 'react-router-dom'
+import { useState, useEffect, lazy, Suspense, type ReactNode } from 'react'
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useI18n } from './hooks/useI18n'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Home as HomeIcon, ShoppingBag, Smartphone, User } from 'lucide-react'
+import { Home as HomeIcon, ShoppingBag, User } from 'lucide-react'
 import { NavProvider } from './ui/nav'
 import { Header } from './components/Header'
 import { Footer } from './components/Footer'
@@ -11,28 +11,26 @@ import { SplashScreen } from './components/SplashScreen'
 import { CookieBanner } from './components/CookieBanner'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { LivePurchaseNotification } from './components/LivePurchaseNotification'
-import { Home } from './pages/Home'
-import { Catalog } from './pages/Catalog'
-import { Product } from './pages/Product'
-import { Cabinet } from './pages/Cabinet'
-// BazzarNotification removed — it's for IPA injection, not the website
-import { Auth } from './pages/Auth'
-import { AddDevice } from './pages/AddDevice'
-import { AddDeviceSuccess } from './pages/AddDeviceSuccess'
-import { Success } from './pages/Success'
-import { OrderCheck } from './pages/OrderCheck'
-import { HowItWorks } from './pages/HowItWorks'
-import { InstallGuide } from './pages/InstallGuide'
-import { Guarantees } from './pages/Guarantees'
-import { Privacy } from './pages/Privacy'
-import { Offer } from './pages/Offer'
-import { CertDashboard } from './pages/CertDashboard'
-import { Registration } from './pages/Registration'
-import { AppsPage } from './pages/AppsPage'
-import { GetUdid } from './pages/GetUdid'
-import { Blog } from './pages/Blog'
-import { Article } from './pages/Article'
-import { NotFound } from './pages/NotFound'
+import { Home } from './pages/Home' // главная — eager, для мгновенного первого рендера
+// Остальные страницы — ленивая загрузка (code-splitting): каждый маршрут в своём чанке
+const Catalog = lazy(() => import('./pages/Catalog').then(m => ({ default: m.Catalog })))
+const Product = lazy(() => import('./pages/Product').then(m => ({ default: m.Product })))
+const Cabinet = lazy(() => import('./pages/Cabinet').then(m => ({ default: m.Cabinet })))
+const Auth = lazy(() => import('./pages/Auth').then(m => ({ default: m.Auth })))
+const AddDevice = lazy(() => import('./pages/AddDevice').then(m => ({ default: m.AddDevice })))
+const AddDeviceSuccess = lazy(() => import('./pages/AddDeviceSuccess').then(m => ({ default: m.AddDeviceSuccess })))
+const Success = lazy(() => import('./pages/Success').then(m => ({ default: m.Success })))
+const OrderCheck = lazy(() => import('./pages/OrderCheck').then(m => ({ default: m.OrderCheck })))
+const HowItWorks = lazy(() => import('./pages/HowItWorks').then(m => ({ default: m.HowItWorks })))
+const InstallGuide = lazy(() => import('./pages/InstallGuide').then(m => ({ default: m.InstallGuide })))
+const Guarantees = lazy(() => import('./pages/Guarantees').then(m => ({ default: m.Guarantees })))
+const Privacy = lazy(() => import('./pages/Privacy').then(m => ({ default: m.Privacy })))
+const Offer = lazy(() => import('./pages/Offer').then(m => ({ default: m.Offer })))
+const Registration = lazy(() => import('./pages/Registration').then(m => ({ default: m.Registration })))
+const GetUdid = lazy(() => import('./pages/GetUdid').then(m => ({ default: m.GetUdid })))
+const Blog = lazy(() => import('./pages/Blog').then(m => ({ default: m.Blog })))
+const Article = lazy(() => import('./pages/Article').then(m => ({ default: m.Article })))
+const NotFound = lazy(() => import('./pages/NotFound').then(m => ({ default: m.NotFound })))
 import { initAnalytics, trackEvent } from './lib/analytics'
 
 /* ═══════════════════════════════════════════════════════════
@@ -58,15 +56,27 @@ function RouteTracker() {
    ═══════════════════════════════════════════════════════════ */
 
 function ScrollTopWithAnalytics() {
-  const { pathname } = useLocation()
-  
-  useEffect(() => { 
-    window.scrollTo(0, 0)
+  const { pathname, hash } = useLocation()
+
+  useEffect(() => {
     trackEvent('views')
     // VK Pixel (Top.Mail.Ru) SPA pageView
     const _tmr = (window as any)._tmr || ((window as any)._tmr = []);
     _tmr.push({ id: "3781126", type: "pageView", url: window.location.href, referrer: document.referrer });
-  }, [pathname])
+
+    // Якорные ссылки (/#faq, /#why, /#cta) — скроллим к секции после монтирования
+    if (hash) {
+      const id = hash.slice(1)
+      const timer = setTimeout(() => {
+        const el = document.getElementById(id)
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        else window.scrollTo(0, 0)
+      }, 80)
+      return () => clearTimeout(timer)
+    }
+
+    window.scrollTo(0, 0)
+  }, [pathname, hash])
 
   useEffect(() => {
     initAnalytics()
@@ -85,13 +95,25 @@ function NavBridge({ children }: { children: ReactNode }) {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   PageFallback — заглушка на время загрузки ленивого чанка
+   ═══════════════════════════════════════════════════════════ */
+
+function PageFallback() {
+  return (
+    <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ width: 36, height: 36, border: '3px solid var(--border)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+      <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════
    App — Routing, Layout, Bottom Navigation
    ═══════════════════════════════════════════════════════════ */
 
 const NAV_ITEMS = [
   { path: '/', labelKey: 'nav.home', icon: HomeIcon },
   { path: '/catalog', labelKey: 'nav.catalog', icon: ShoppingBag },
-  { path: '/catalog?category=apps', labelKey: 'nav.apps', icon: Smartphone },
   { path: '/cabinet', labelKey: 'nav.cabinet', icon: User },
 ]
 
@@ -125,6 +147,7 @@ export function App() {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
               >
+                <Suspense fallback={<PageFallback />}>
                 <Routes location={location}>
                   <Route path="/" element={<Home />} />
                   <Route path="/catalog" element={<Catalog />} />
@@ -141,14 +164,15 @@ export function App() {
                   <Route path="/guarantees" element={<Guarantees />} />
                   <Route path="/privacy" element={<Privacy />} />
                   <Route path="/offer" element={<Offer />} />
-                  <Route path="/dashboard" element={<CertDashboard />} />
                   <Route path="/r/:code" element={<Registration />} />
-                  <Route path="/apps" element={<AppsPage />} />
+                  {/* /apps объединён с каталогом — редирект на категорию «Приложения» */}
+                  <Route path="/apps" element={<Navigate to="/catalog?category=apps" replace />} />
                   <Route path="/get-udid" element={<GetUdid />} />
                   <Route path="/blog" element={<Blog />} />
                   <Route path="/blog/:slug" element={<Article />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
+                </Suspense>
               </motion.div>
             </AnimatePresence>
           </ErrorBoundary>

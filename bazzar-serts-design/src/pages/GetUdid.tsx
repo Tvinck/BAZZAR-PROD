@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Smartphone, Copy, Check, ShieldCheck, ChevronRight, Download, Sparkles, ArrowRight } from 'lucide-react'
 import { getDeviceDisplayName } from '../lib/device-models'
+import { useToast } from '../components/Toast'
+import { SafariHint } from '../components/SafariHint'
 
 /* ═══════════════════════════════════════════════════════════
    GetUdid — Страница для получения UDID устройства
@@ -10,6 +12,7 @@ import { getDeviceDisplayName } from '../lib/device-models'
    ═══════════════════════════════════════════════════════════ */
 
 export function GetUdid() {
+  const { toast } = useToast()
   const [udid, setUdid] = useState<string | null>(null)
   const [model, setModel] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -30,6 +33,12 @@ export function GetUdid() {
   }
 
   const handleGetUdid = () => {
+    // Профиль Apple ставится только на iPhone/iPad — на десктопе/Android подсказываем открыть на устройстве
+    const isAppleMobile = /iPhone|iPad|iPod/i.test(navigator.userAgent)
+    if (!isAppleMobile) {
+      toast('Откройте эту страницу на iPhone или iPad — UDID можно получить только на устройстве Apple')
+      return
+    }
     const host = window.location.host
     const protocol = window.location.protocol
     window.location.href = `${protocol}//${host}/api/udid/generate`
@@ -141,7 +150,7 @@ export function GetUdid() {
                 </div>
               </Link>
 
-              <Link to="/apps" style={{ textDecoration: 'none' }}>
+              <Link to="/catalog?category=apps" style={{ textDecoration: 'none' }}>
                 <div style={{
                   padding: '18px 20px', borderRadius: 'var(--r-lg)',
                   background: 'rgba(255,255,255,0.03)',
@@ -259,6 +268,9 @@ export function GetUdid() {
               </motion.div>
             ))}
           </motion.div>
+
+          {/* Подсказка про Safari (если открыто во встроенном браузере) */}
+          <SafariHint />
 
           {/* CTA button */}
           <motion.button

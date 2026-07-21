@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { User, Package, ShieldCheck, Smartphone, Headphones, Copy, Check, Shield, ArrowRight, Send, BookOpen, ChevronDown, ChevronUp, Monitor, Plus, Trash2, Fingerprint, Crown, RefreshCw, Download, Zap, Heart, Star, ExternalLink, Calendar, Lock, Lightbulb, AlertTriangle, CheckCircle2, RotateCw, Box, MessageSquare, Upload, Image as ImageIcon, Clock, Loader2, Eye, Gift, ShoppingBag } from 'lucide-react'
+import { User, Package, ShieldCheck, Smartphone, Headphones, Copy, Check, Shield, ArrowRight, Send, BookOpen, ChevronDown, ChevronUp, Monitor, Plus, Crown, Download, Star, Calendar, AlertTriangle, CheckCircle2, RotateCw, MessageSquare, Upload, Image as ImageIcon, Clock, Loader2, Eye, Gift, ShoppingBag } from 'lucide-react'
 import { useToast } from '../components/Toast'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useProfile } from '../hooks/useProfile'
@@ -9,6 +9,8 @@ import { useI18n } from '../hooks/useI18n'
 import { supabase } from '../lib/supabase'
 import { sanitizeInput } from '../lib/sanitize'
 import { getDeviceDisplayName } from '../lib/device-models'
+import { installTarget } from '../lib/appInstall'
+import { SafariHint } from '../components/SafariHint'
 
 /* ═══════════════════════════════════════════════════════════
    Cabinet — 6 разделов как в оригинале + Обращения
@@ -135,23 +137,27 @@ function MyAppsTab({ udid }: { udid: string | null }) {
               </div>
             </div>
 
-            {/* Download */}
-            {app.ipa_url && (
-              <a
-                href={app.ipa_url}
-                download
-                style={{
-                  padding: '8px 16px', borderRadius: 'var(--r-md)',
-                  background: 'linear-gradient(135deg, #af66ff, #6e00e5)',
-                  color: '#fff', textDecoration: 'none',
-                  fontSize: '0.8rem', fontWeight: 600,
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  flexShrink: 0,
-                }}
-              >
-                <Download size={14} /> IPA
-              </a>
-            )}
+            {/* Установка / скачивание */}
+            {(() => {
+              const inst = installTarget(app.ipa_url)
+              if (inst.mode === 'none') return null
+              return (
+                <a
+                  href={inst.href}
+                  {...(inst.mode === 'download' ? { download: true } : {})}
+                  style={{
+                    padding: '8px 16px', borderRadius: 'var(--r-md)',
+                    background: 'linear-gradient(135deg, #af66ff, #6e00e5)',
+                    color: '#fff', textDecoration: 'none',
+                    fontSize: '0.8rem', fontWeight: 600,
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    flexShrink: 0,
+                  }}
+                >
+                  <Download size={14} /> {inst.mode === 'ota' ? 'Установить' : 'Скачать'}
+                </a>
+              )
+            })()}
           </div>
         )
       })}
@@ -278,8 +284,10 @@ export function Cabinet() {
       .select('id, plan_id, status, crm_status, approval_comment, created_at, updated_at, sale_price')
       .eq('udid', udid)
       .order('created_at', { ascending: false })
-      .then(({ data }) => { if (data) setCertificates(data as Certificate[]); setCertsLoading(false) })
-      .catch(() => setCertsLoading(false))
+      .then(
+        ({ data }) => { if (data) setCertificates(data as Certificate[]); setCertsLoading(false) },
+        () => setCertsLoading(false)
+      )
   }, [udid])
 
   // Subscriptions state
@@ -295,8 +303,10 @@ export function Cabinet() {
       .select('*')
       .eq('udid', udid)
       .order('created_at', { ascending: false })
-      .then(({ data }) => { if (data) setSubscriptions(data as Subscription[]); setSubsLoading(false) })
-      .catch(() => setSubsLoading(false))
+      .then(
+        ({ data }) => { if (data) setSubscriptions(data as Subscription[]); setSubsLoading(false) },
+        () => setSubsLoading(false)
+      )
   }, [tab, udid])
 
   // Referral system state
@@ -415,12 +425,6 @@ export function Cabinet() {
     }
   }, [udid, ticketSubject, ticketMessage, ticketImageUrl, fetchTickets])
 
-  const handleCopyUdid = useCallback((udid: string) => {
-    navigator.clipboard?.writeText(udid)
-    setCopiedUdid(udid)
-    toast(t('cabinet.toast.udidCopied'))
-    setTimeout(() => setCopiedUdid(null), 2000)
-  }, [])
 
 
 
@@ -512,6 +516,8 @@ export function Cabinet() {
                 </p>
               </div>
             </div>
+
+            <SafariHint />
 
             <button
               className="btn btn-gradient"
@@ -834,9 +840,12 @@ export function Cabinet() {
                   </div>
                 ) : (
                   certificates.map((cert) => {
-                    const isInProgress = cert.status === 'paid' || cert.status === 'pending'
-                    const isReady = cert.status === 'active' || cert.status === 'ready'
-                    const isError = cert.status === 'error' || cert.status === 'revoked'
+                    // Готовность определяем по crm_status (его выставляет оператор при согласовании),
+                    // с запасом на легаси-значения в status. Раньше смотрели только на status,
+                    // из-за чего согласованный серт вечно висел «в процессе».
+                    const isReady = cert.crm_status === 'approved' || cert.status === 'active' || cert.status === 'ready'
+                    const isError = cert.crm_status === 'rejected' || cert.status === 'error' || cert.status === 'revoked'
+                    const isInProgress = !isReady && !isError
                     const statusColor = isReady ? 'var(--success)' : isError ? '#ef4444' : '#f59e0b'
                     const statusBg = isReady ? 'rgba(52,199,89,0.1)' : isError ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)'
                     const statusBorder = isReady ? 'rgba(52,199,89,0.2)' : isError ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)'
@@ -1250,7 +1259,7 @@ export function Cabinet() {
                         {subscriptions.length > 0 ? `${subscriptions.filter(s => s.status === 'active').length} активных` : 'Нет активных подписок'}
                       </p>
                     </div>
-                    <Link to="/catalog?category=subs" className="btn btn-soft" style={{ padding: '10px 18px', borderRadius: 'var(--r-md)', gap: 6, fontSize: '0.85rem' }}>
+                    <Link to="/catalog?category=apps" className="btn btn-soft" style={{ padding: '10px 18px', borderRadius: 'var(--r-md)', gap: 6, fontSize: '0.85rem' }}>
                       {t('cabinet.subs.catalogLink')} <ArrowRight size={14} />
                     </Link>
                   </div>
@@ -1267,7 +1276,7 @@ export function Cabinet() {
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-3)', marginBottom: 20, maxWidth: 340, margin: '0 auto 20px' }}>
                       Подписки на приложения появятся здесь после покупки. Перейдите в каталог чтобы выбрать.
                     </p>
-                    <Link to="/catalog?category=subs" className="btn btn-gradient" style={{ padding: '12px 28px', borderRadius: 'var(--r-md)', gap: 8 }}>
+                    <Link to="/catalog?category=apps" className="btn btn-gradient" style={{ padding: '12px 28px', borderRadius: 'var(--r-md)', gap: 8 }}>
                       <ShoppingBag size={16} /> Перейти в каталог
                     </Link>
                   </div>

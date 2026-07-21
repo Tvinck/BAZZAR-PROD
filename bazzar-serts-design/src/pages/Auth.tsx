@@ -141,6 +141,19 @@ export function Auth() {
           }
         }
         
+        // Возобновление покупки приложения (пользователь нажал «Купить» на /apps без UDID)
+        const pendingApp = localStorage.getItem('pending_app_purchase');
+        if (pendingApp) {
+          localStorage.removeItem('pending_app_purchase');
+          try {
+            const { appId } = JSON.parse(pendingApp);
+            if (appId) {
+              navigate(`/catalog?category=apps&buy=${encodeURIComponent(appId)}`, { replace: true });
+              return;
+            }
+          } catch { /* ignore malformed intent */ }
+        }
+
         // Redirect to personal cabinet
         navigate('/cabinet', { replace: true });
       } else {

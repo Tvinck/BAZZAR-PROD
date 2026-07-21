@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, Package, CheckCircle, Clock, AlertTriangle, XCircle, ArrowRight, Copy, Check, ExternalLink } from 'lucide-react'
 import { useToast } from '../components/Toast'
@@ -48,7 +48,8 @@ async function verifyOnPlatform(
 export function OrderCheck() {
   const { t } = useI18n()
   usePageTitle(t('order.title'))
-  const [orderId, setOrderId] = useState('')
+  const [searchParams] = useSearchParams()
+  const [orderId, setOrderId] = useState(searchParams.get('code') || '')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<OrderResult | null>(null)
   const [notFound, setNotFound] = useState(false)

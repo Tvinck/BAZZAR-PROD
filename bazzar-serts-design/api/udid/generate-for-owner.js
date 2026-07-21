@@ -1,4 +1,5 @@
 import { rateLimit } from '../lib/rate-limit.js';
+import crypto from 'crypto';
 
 const limiter = rateLimit({ windowMs: 60_000, max: 10 });
 
@@ -19,12 +20,15 @@ export default function handler(req, res) {
     return res.status(400).send('Missing or invalid owner parameter');
   }
 
-  const host = req.headers.host || 'localhost:5174';
+  const host = req.headers.host || 'bazzar-serts.shop';
   const protocol = host.includes('localhost') ? 'http' : 'https';
   const receiveUrl = `${protocol}://${host}/api/udid/receive-device?owner=${encodeURIComponent(ownerUdid)}`;
 
+  // Generate unique UUID for each request
+  const uuid = crypto.randomUUID();
+
   // Apple OTA Profile Service enrollment profile.
-  // CRITICAL: Do NOT request IMEI/ICCID — iOS 15+ rejects profiles that request these.
+  // Only UDID + PRODUCT. No IMEI, ICCID, SERIAL.
   const xml = [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">',
@@ -37,29 +41,31 @@ export default function handler(req, res) {
     '    <key>DeviceAttributes</key>',
     '    <array>',
     '      <string>UDID</string>',
-    '      <string>VERSION</string>',
     '      <string>PRODUCT</string>',
     '    </array>',
     '  </dict>',
     '  <key>PayloadOrganization</key>',
-    '  <string>Bazzar Market</string>',
+    '  <string>BAZZAR Certs</string>',
     '  <key>PayloadDisplayName</key>',
-    '  <string>Bazzar Market</string>',
+    '  <string>BAZZAR — Добавление устройства</string>',
     '  <key>PayloadVersion</key>',
     '  <integer>1</integer>',
     '  <key>PayloadUUID</key>',
-    '  <string>A1B2C3D4-5678-9ABC-DEF0-112233445566</string>',
+    `  <string>${uuid}</string>`,
     '  <key>PayloadIdentifier</key>',
-    '  <string>com.bazzar.market.add-device</string>',
+    '  <string>shop.bazzar-serts.add-device</string>',
     '  <key>PayloadDescription</key>',
-    '  <string>This temporary profile is used to register your device. It can be removed after installation.</string>',
+    '  <string>Временный профиль для привязки устройства. Запрашивает только идентификатор (UDID) и модель. Можно удалить сразу после установки.</string>',
     '  <key>PayloadType</key>',
     '  <string>Profile Service</string>',
+    '  <key>PayloadRemovalDisallowed</key>',
+    '  <false/>',
     '</dict>',
     '</plist>',
   ].join('\n');
 
   res.setHeader('Content-Type', 'application/x-apple-aspen-config');
-  res.setHeader('Content-Disposition', 'attachment; filename="add-device.mobileconfig"');
+  res.setHeader('Content-Disposition', 'attachment; filename="bazzar-add-device.mobileconfig"');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.status(200).send(xml);
 }

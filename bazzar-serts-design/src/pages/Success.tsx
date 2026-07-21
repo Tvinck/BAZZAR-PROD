@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { trackEvent } from '../lib/analytics';
 import { useI18n } from '../hooks/useI18n';
 import { useToast } from '../components/Toast';
+import { SafariHint } from '../components/SafariHint';
 
-import { ShieldAlert, Lock, ShieldCheck, LifeBuoy } from 'lucide-react';
+import { ShieldAlert, Lock, ShieldCheck, LifeBuoy, Clock, RefreshCw, Search, Home } from 'lucide-react';
 
 export function Success() {
   const { t } = useI18n();
@@ -16,6 +17,7 @@ export function Success() {
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false); // заказ ещё не виден в GGSel API (лаг), не жёсткая ошибка
   const [order, setOrder] = useState<{ item_name: string, uniquecode: string, status: string } | null>(null);
 
   useEffect(() => {
@@ -78,10 +80,12 @@ export function Success() {
             }
           }
           
-          // Если заказ еще не найден, ждем 3 секунды и пробуем снова
+          // Если заказ еще не найден, ждем 3 секунды и пробуем снова.
+          // Исчерпали попытки → это, скорее всего, лаг платёжной системы, а не ошибка.
           retries--;
           if (retries === 0) {
-            setError(data.error || 'Ошибка проверки заказа. Пожалуйста, обновите страницу.');
+            setPending(true);
+            setError('Платёжная система ещё передаёт данные о вашей оплате.');
             setLoading(false);
           } else {
             await new Promise(resolve => setTimeout(resolve, 3000));
@@ -122,18 +126,46 @@ export function Success() {
   }
 
   if (error) {
+    const accent = pending ? '#f59e0b' : '#f87171';
+    const accentBg = pending ? 'rgba(245,158,11,0.12)' : 'rgba(248,113,113,0.12)';
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '50vh', textAlign: 'center', padding: '0 16px' }}>
-        <div style={{ width: 64, height: 64, background: 'rgba(248, 113, 113, 0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
-          <svg style={{ width: 32, height: 32, color: 'var(--red)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', textAlign: 'center', padding: '80px 16px 40px', maxWidth: 460, margin: '0 auto' }}>
+        <div style={{ width: 72, height: 72, background: accentBg, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+          {pending
+            ? <Clock size={34} style={{ color: accent }} />
+            : <svg style={{ width: 34, height: 34, color: accent }} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>}
         </div>
-        <h1 className="section-title" style={{ fontSize: '2rem', marginBottom: 12 }}>{t('success.errorTitle')}</h1>
-        <p style={{ color: 'var(--text-2)', maxWidth: 400, marginBottom: 32 }}>{error}</p>
-        <button onClick={() => navigate('/')} className="btn btn-primary">
-          {t('success.backHome')}
-        </button>
+
+        <h1 style={{ fontSize: '1.6rem', fontWeight: 800, marginBottom: 12 }}>
+          {pending ? 'Оплата обрабатывается' : t('success.errorTitle')}
+        </h1>
+        <p style={{ color: 'var(--text-2)', marginBottom: 8, lineHeight: 1.6 }}>
+          {pending
+            ? 'Платёжная система ещё передаёт данные о вашей оплате — обычно это занимает 1–2 минуты. Нажмите «Проверить ещё раз» через минуту.'
+            : error}
+        </p>
+
+        {uniquecode && (
+          <div style={{ margin: '10px 0 24px', fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--text-3)', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 14px', wordBreak: 'break-all' }}>
+            Код заказа: {uniquecode}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 320 }}>
+          <button onClick={() => window.location.reload()} className="btn btn-primary" style={{ padding: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <RefreshCw size={16} /> Проверить ещё раз
+          </button>
+          <Link to={`/order-check${uniquecode ? `?code=${encodeURIComponent(uniquecode)}` : ''}`} className="btn btn-soft" style={{ padding: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, textDecoration: 'none' }}>
+            <Search size={16} /> Проверить по коду заказа
+          </Link>
+          <button onClick={() => navigate('/')} className="btn btn-ghost" style={{ padding: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <Home size={16} /> На главную
+          </button>
+        </div>
+
+        <p style={{ fontSize: '0.8rem', color: 'var(--text-3)', marginTop: 20, lineHeight: 1.5 }}>
+          Если через несколько минут заказ не появился — напишите в поддержку и пришлите код заказа.
+        </p>
       </div>
     );
   }
@@ -200,7 +232,9 @@ export function Success() {
           </ol>
         </div>
 
-        <button 
+        <SafariHint />
+
+        <button
           onClick={handleGetUdid}
           className="btn btn-primary"
           style={{ width: '100%', marginTop: 8, padding: '16px 24px', fontSize: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}
