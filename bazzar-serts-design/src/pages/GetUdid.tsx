@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Smartphone, Copy, Check, ShieldCheck, ChevronRight, Download, Sparkles, ArrowRight } from 'lucide-react'
-import { useI18n } from '../hooks/useI18n'
 import { getDeviceDisplayName } from '../lib/device-models'
 
 /* ═══════════════════════════════════════════════════════════
@@ -11,7 +10,6 @@ import { getDeviceDisplayName } from '../lib/device-models'
    ═══════════════════════════════════════════════════════════ */
 
 export function GetUdid() {
-  const { t } = useI18n()
   const [udid, setUdid] = useState<string | null>(null)
   const [model, setModel] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
