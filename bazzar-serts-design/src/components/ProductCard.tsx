@@ -236,15 +236,31 @@ export function ProductCard({ product, index = 0 }: Props) {
                 {product.title}
               </h3>
 
+              {/* Price tag for paid apps */}
+              {product.price > 0 && (
+                <div style={{
+                  display: 'inline-block',
+                  padding: '6px 18px', borderRadius: 'var(--r-full)',
+                  background: 'linear-gradient(135deg, rgba(149,51,255,0.15), rgba(110,0,229,0.1))',
+                  border: '1px solid rgba(149,51,255,0.25)',
+                  fontFamily: 'var(--font-display)', fontWeight: 800,
+                  fontSize: '1.1rem', color: '#af66ff',
+                  marginBottom: 16,
+                }}>
+                  {product.price} ₽
+                </div>
+              )}
+
               {/* Message */}
               <p style={{
                 color: 'var(--text-2, #999)',
                 fontSize: '0.88rem', lineHeight: 1.6,
                 marginBottom: 24,
               }}>
-                Скоро будет доступна подпись приложений через&nbsp;сайт.
-                <br />
-                Следите за обновлениями!
+                {product.price > 0
+                  ? <>Покупка и установка приложений через сайт скоро будет доступна.<br />Следите за обновлениями!</>
+                  : <>Скоро будет доступна подпись приложений через&nbsp;сайт.<br />Следите за обновлениями!</>
+                }
               </p>
 
               {/* Decorative line */}

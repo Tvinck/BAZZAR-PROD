@@ -86,6 +86,7 @@ function SkeletonCard({ index }: { index: number }) {
 
 function AppCard({ app, index }: { app: BazzarApp; index: number }) {
   const [imgError, setImgError] = useState(false)
+  const [showSoon, setShowSoon] = useState(false)
 
   return (
     <motion.div
@@ -197,16 +198,35 @@ function AppCard({ app, index }: { app: BazzarApp; index: number }) {
 
       {/* Download / Price button */}
       {(app.price || 0) > 0 ? (
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          padding: '11px 16px',
-          background: 'linear-gradient(135deg, #af66ff, #6e00e5)',
-          color: '#fff',
-          borderRadius: 'var(--r-sm)',
-          fontWeight: 600, fontSize: '0.85rem',
-          marginTop: 'auto',
-        }}>
-          {app.price} ₽
+        <div style={{ marginTop: 'auto' }}>
+          {showSoon && (
+            <div style={{
+              padding: '10px 14px', marginBottom: 8,
+              background: 'rgba(149,51,255,0.08)',
+              border: '1px solid rgba(149,51,255,0.15)',
+              borderRadius: 'var(--r-sm)',
+              fontSize: '0.78rem', color: 'var(--text-2, #999)',
+              lineHeight: 1.5, textAlign: 'center',
+            }}>
+              Покупка через сайт скоро будет доступна.
+            </div>
+          )}
+          <button
+            onClick={() => setShowSoon(true)}
+            style={{
+              width: '100%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              padding: '11px 16px',
+              background: 'linear-gradient(135deg, #af66ff, #6e00e5)',
+              color: '#fff', border: 'none',
+              borderRadius: 'var(--r-sm)',
+              fontWeight: 600, fontSize: '0.85rem',
+              fontFamily: 'inherit', cursor: 'pointer',
+              transition: 'opacity 200ms ease',
+            }}
+          >
+            Купить · {app.price} ₽
+          </button>
         </div>
       ) : (
         <a
