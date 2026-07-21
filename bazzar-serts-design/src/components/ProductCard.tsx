@@ -96,16 +96,35 @@ export function ProductCard({ product, index = 0 }: Props) {
         </div>
 
         {/* Price / Install button */}
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, paddingTop: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingTop: 4 }}>
           {isApp ? (
-            <span style={{
-              fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.85rem',
-              padding: '4px 14px', borderRadius: 'var(--r-full)',
-              background: 'linear-gradient(135deg, #af66ff, #6e00e5)',
-              color: '#fff',
-            }}>
-              Установить
-            </span>
+            <div style={{ display: 'flex', gap: 6, width: '100%' }}>
+              {product.ipa_url && (
+                <a
+                  href={product.ipa_url}
+                  download
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: '0.78rem',
+                    padding: '5px 12px', borderRadius: 'var(--r-full)',
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    color: 'var(--text-2, #ccc)', textDecoration: 'none',
+                    display: 'flex', alignItems: 'center', gap: 4,
+                  }}
+                >
+                  Скачать
+                </a>
+              )}
+              <span style={{
+                fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.78rem',
+                padding: '5px 14px', borderRadius: 'var(--r-full)',
+                background: 'linear-gradient(135deg, #af66ff, #6e00e5)',
+                color: '#fff',
+              }}>
+                Установить
+              </span>
+            </div>
           ) : (
             <>
               <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.1rem' }}>
