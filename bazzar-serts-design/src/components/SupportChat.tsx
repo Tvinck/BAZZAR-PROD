@@ -18,6 +18,23 @@ interface SupabaseMessage {
   created_at: string
 }
 
+/** Get a short device description from User-Agent */
+function getDeviceInfo(): string {
+  const ua = navigator.userAgent
+  if (/iPhone/.test(ua)) {
+    const m = ua.match(/iPhone OS (\d+[_\d]*)/)
+    return `iPhone (iOS ${m ? m[1].replace(/_/g, '.') : '?'})`
+  }
+  if (/iPad/.test(ua)) return 'iPad'
+  if (/Android/.test(ua)) {
+    const m = ua.match(/Android ([0-9.]+)/)
+    return `Android ${m ? m[1] : ''}`
+  }
+  if (/Mac OS X/.test(ua)) return 'Mac'
+  if (/Windows/.test(ua)) return 'Windows'
+  return 'Web'
+}
+
 export function SupportChat() {
   const { t } = useI18n()
   const [open, setOpen] = useState(false)
@@ -70,6 +87,16 @@ export function SupportChat() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, open])
 
+  // Get client context for enriched notifications
+  const getClientContext = () => {
+    // UDID from auth flow (stored after profile installation)
+    const udid = localStorage.getItem('bazzar_udid') || null
+    const deviceInfo = getDeviceInfo()
+    const currentPage = window.location.pathname
+
+    return { udid, deviceInfo, currentPage }
+  }
+
   // Send message via Supabase RPC
   const sendMessage = async () => {
     if (!input.trim() || !userId) return
@@ -88,9 +115,13 @@ export function SupportChat() {
     }
     setMessages(prev => [...prev, tempMsg])
 
+    const ctx = getClientContext()
     const { error } = await supabase.rpc('bazzar_support_message', {
       p_user_id: userId,
-      p_message: msgText
+      p_message: msgText,
+      p_udid: ctx.udid,
+      p_device_info: ctx.deviceInfo,
+      p_current_page: ctx.currentPage,
     })
 
     if (error) {
@@ -115,9 +146,13 @@ export function SupportChat() {
       }
       setMessages(prev => [...prev, tempMsg])
 
+      const ctx = getClientContext()
       await supabase.rpc('bazzar_support_message', {
         p_user_id: userId,
-        p_message: msgText
+        p_message: msgText,
+        p_udid: ctx.udid,
+        p_device_info: ctx.deviceInfo,
+        p_current_page: ctx.currentPage,
       })
     }
 
@@ -154,9 +189,13 @@ export function SupportChat() {
     }
     setMessages(prev => [...prev, tempMsg])
 
+    const ctx = getClientContext()
     await supabase.rpc('bazzar_support_message', {
       p_user_id: userId,
-      p_message: question
+      p_message: question,
+      p_udid: ctx.udid,
+      p_device_info: ctx.deviceInfo,
+      p_current_page: ctx.currentPage,
     })
   }
 
