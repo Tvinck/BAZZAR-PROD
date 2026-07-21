@@ -18,6 +18,7 @@ interface BazzarApp {
   ipa_url: string | null
   bundle_id: string | null
   size_bytes: number | null
+  price: number | null
   created_at: string
   is_active: boolean
 }
@@ -194,29 +195,43 @@ function AppCard({ app, index }: { app: BazzarApp; index: number }) {
         </p>
       )}
 
-      {/* Download button */}
-      <a
-        href={app.ipa_url || '#'}
-        download
-        onClick={(e) => { if (!app.ipa_url) e.preventDefault() }}
-        style={{
+      {/* Download / Price button */}
+      {(app.price || 0) > 0 ? (
+        <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           padding: '11px 16px',
-          background: app.ipa_url
-            ? 'linear-gradient(135deg, #af66ff, #6e00e5)'
-            : 'rgba(255,255,255,0.04)',
-          color: app.ipa_url ? '#fff' : 'var(--text-3, #666)',
+          background: 'linear-gradient(135deg, #af66ff, #6e00e5)',
+          color: '#fff',
           borderRadius: 'var(--r-sm)',
           fontWeight: 600, fontSize: '0.85rem',
-          textDecoration: 'none',
-          cursor: app.ipa_url ? 'pointer' : 'not-allowed',
-          transition: 'opacity 200ms ease, transform 100ms ease',
           marginTop: 'auto',
-        }}
-      >
-        <Download size={16} />
-        {app.ipa_url ? 'Скачать IPA' : 'Недоступно'}
-      </a>
+        }}>
+          {app.price} ₽
+        </div>
+      ) : (
+        <a
+          href={app.ipa_url || '#'}
+          download
+          onClick={(e) => { if (!app.ipa_url) e.preventDefault() }}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            padding: '11px 16px',
+            background: app.ipa_url
+              ? 'linear-gradient(135deg, #af66ff, #6e00e5)'
+              : 'rgba(255,255,255,0.04)',
+            color: app.ipa_url ? '#fff' : 'var(--text-3, #666)',
+            borderRadius: 'var(--r-sm)',
+            fontWeight: 600, fontSize: '0.85rem',
+            textDecoration: 'none',
+            cursor: app.ipa_url ? 'pointer' : 'not-allowed',
+            transition: 'opacity 200ms ease, transform 100ms ease',
+            marginTop: 'auto',
+          }}
+        >
+          <Download size={16} />
+          {app.ipa_url ? 'Скачать IPA' : 'Недоступно'}
+        </a>
+      )}
     </motion.div>
   )
 }

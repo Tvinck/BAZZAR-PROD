@@ -98,8 +98,8 @@ export function ProductCard({ product, index = 0 }: Props) {
         {/* Price / Install button */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingTop: 4 }}>
           {isApp ? (
-            <div style={{ display: 'flex', gap: 6, width: '100%' }}>
-              {product.ipa_url && (
+            <div style={{ display: 'flex', gap: 6, width: '100%', alignItems: 'center' }}>
+              {product.price === 0 && product.ipa_url ? (
                 <a
                   href={product.ipa_url}
                   download
@@ -115,7 +115,11 @@ export function ProductCard({ product, index = 0 }: Props) {
                 >
                   Скачать
                 </a>
-              )}
+              ) : product.price > 0 ? (
+                <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1rem' }}>
+                  {product.price} ₽
+                </span>
+              ) : null}
               <span style={{
                 fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.78rem',
                 padding: '5px 14px', borderRadius: 'var(--r-full)',
