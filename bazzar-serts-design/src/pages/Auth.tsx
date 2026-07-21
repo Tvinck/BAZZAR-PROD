@@ -16,6 +16,7 @@ export function Auth() {
 
       if (udid) {
         localStorage.setItem('apple_udid', udid);
+        localStorage.setItem('bazzar_udid', udid);
         if (model) {
           localStorage.setItem('apple_device_model', model);
         }

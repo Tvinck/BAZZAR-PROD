@@ -29,6 +29,7 @@ import { Offer } from './pages/Offer'
 import { CertDashboard } from './pages/CertDashboard'
 import { Registration } from './pages/Registration'
 import { AppsPage } from './pages/AppsPage'
+import { GetUdid } from './pages/GetUdid'
 import { Blog } from './pages/Blog'
 import { Article } from './pages/Article'
 import { NotFound } from './pages/NotFound'
@@ -143,6 +144,7 @@ export function App() {
                   <Route path="/dashboard" element={<CertDashboard />} />
                   <Route path="/r/:code" element={<Registration />} />
                   <Route path="/apps" element={<AppsPage />} />
+                  <Route path="/get-udid" element={<GetUdid />} />
                   <Route path="/blog" element={<Blog />} />
                   <Route path="/blog/:slug" element={<Article />} />
                   <Route path="*" element={<NotFound />} />
