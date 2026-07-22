@@ -74,10 +74,13 @@ export default function BazzarAppsPage() {
     }
 
     setIsUploading(true)
-    setUploadProgress(10)
+    setUploadProgress(5)
+
+    const R2_BASE = 'https://bazzar-r2.artyomkoshelev-04.workers.dev'
+    const R2_TOKEN = process.env.NEXT_PUBLIC_R2_UPLOAD_TOKEN || ''
 
     try {
-      // 1. Upload Icon
+      // 1. Upload Icon (small file → Supabase Storage)
       const iconExt = iconFile.name.split('.').pop()
       const iconPath = `icons/${Date.now()}_${Math.random().toString(36).substring(7)}.${iconExt}`
       const { error: iconError } = await supabase.storage
@@ -85,21 +88,99 @@ export default function BazzarAppsPage() {
         .upload(iconPath, iconFile)
 
       if (iconError) throw iconError
-      setUploadProgress(30)
+      setUploadProgress(15)
 
-      // 2. Upload IPA
-      const ipaExt = ipaFile.name.split('.').pop()
-      const ipaPath = `ipas/${Date.now()}_${Math.random().toString(36).substring(7)}.${ipaExt}`
-      const { error: ipaError } = await supabase.storage
-        .from('bazzar-apps')
-        .upload(ipaPath, ipaFile)
+      // 2. Upload IPA via R2 Worker.
+      // Большой PUT одним куском Cloudflare Worker обрывает (ERR_CONNECTION_RESET —
+      // лимит тела/памяти воркера). Поэтому прямой PUT — только для мелких файлов,
+      // всё крупнее грузим multipart'ом чанками по 10 МБ, с ретраями на обрывы.
+      const ipaKey = `ipa/${crypto.randomUUID()}/${ipaFile.name.replace(/\s+/g, '_')}`
+      const CHUNK_SIZE = 10 * 1024 * 1024 // 10MB
+      const DIRECT_LIMIT = 8 * 1024 * 1024 // прямой PUT только до 8MB
 
-      if (ipaError) throw ipaError
-      setUploadProgress(80)
+      // fetch с ретраями: сетевой сброс (CONNECTION_RESET) и 5xx повторяем, 4xx — нет
+      const fetchRetry = async (url: string, init: RequestInit, attempts = 3): Promise<Response> => {
+        let lastErr: unknown
+        for (let a = 1; a <= attempts; a++) {
+          try {
+            const res = await fetch(url, init)
+            if (res.ok || res.status < 500) return res
+            lastErr = new Error(`HTTP ${res.status}`)
+          } catch (e) {
+            lastErr = e // обрыв соединения — повторяем
+          }
+          if (a < attempts) await new Promise(r => setTimeout(r, 1000 * a))
+        }
+        throw lastErr instanceof Error ? lastErr : new Error('Сеть недоступна')
+      }
 
-      // Get public URLs
+      const abortMultipart = (uploadId: string) =>
+        fetch(`${R2_BASE}/multipart/abort`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Upload-Token': R2_TOKEN },
+          body: JSON.stringify({ uploadId, key: ipaKey }),
+        }).catch(() => {})
+
+      if (ipaFile.size <= DIRECT_LIMIT) {
+        // Мелкий файл — прямой PUT
+        const putRes = await fetchRetry(`${R2_BASE}/${ipaKey}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/octet-stream', 'X-Upload-Token': R2_TOKEN },
+          body: ipaFile,
+        })
+        if (!putRes.ok) throw new Error(`Загрузка не удалась (HTTP ${putRes.status})`)
+        setUploadProgress(80)
+      } else {
+        // Крупный файл — multipart
+        const createRes = await fetchRetry(`${R2_BASE}/multipart/create`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Upload-Token': R2_TOKEN },
+          body: JSON.stringify({ key: ipaKey }),
+        })
+        if (!createRes.ok) throw new Error('Не удалось начать загрузку (multipart/create)')
+        const { uploadId } = await createRes.json()
+
+        const totalParts = Math.ceil(ipaFile.size / CHUNK_SIZE)
+        const parts: { partNumber: number; etag: string }[] = []
+
+        for (let i = 0; i < totalParts; i++) {
+          const start = i * CHUNK_SIZE
+          const end = Math.min(start + CHUNK_SIZE, ipaFile.size)
+          const chunk = ipaFile.slice(start, end)
+
+          let partRes: Response
+          try {
+            partRes = await fetchRetry(
+              `${R2_BASE}/multipart/part?uploadId=${uploadId}&partNumber=${i + 1}&key=${encodeURIComponent(ipaKey)}`,
+              { method: 'PUT', headers: { 'X-Upload-Token': R2_TOKEN }, body: chunk }
+            )
+          } catch {
+            await abortMultipart(uploadId)
+            throw new Error(`Чанк ${i + 1}/${totalParts}: соединение оборвалось. Попробуйте ещё раз.`)
+          }
+          if (!partRes.ok) {
+            await abortMultipart(uploadId)
+            throw new Error(`Чанк ${i + 1}/${totalParts} не загрузился (HTTP ${partRes.status})`)
+          }
+
+          const partData = await partRes.json()
+          parts.push({ partNumber: partData.partNumber, etag: partData.etag })
+          setUploadProgress(15 + Math.round((i + 1) / totalParts * 65))
+        }
+
+        const completeRes = await fetchRetry(`${R2_BASE}/multipart/complete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Upload-Token': R2_TOKEN },
+          body: JSON.stringify({ uploadId, key: ipaKey, parts }),
+        })
+        if (!completeRes.ok) throw new Error('Не удалось завершить загрузку (multipart/complete)')
+      }
+
+      setUploadProgress(85)
+      const ipaPublicUrl = `${R2_BASE}/${ipaKey}`
+
+      // Get icon public URL
       const { data: iconData } = supabase.storage.from('bazzar-apps').getPublicUrl(iconPath)
-      const { data: ipaData } = supabase.storage.from('bazzar-apps').getPublicUrl(ipaPath)
 
       // 3. Insert into DB
       const { error: dbError } = await supabase
@@ -110,7 +191,7 @@ export default function BazzarAppsPage() {
           description,
           bundle_id: bundleId,
           icon_url: iconData.publicUrl,
-          ipa_url: ipaData.publicUrl,
+          ipa_url: ipaPublicUrl,
           size_bytes: ipaFile.size,
           is_active: true
         })
